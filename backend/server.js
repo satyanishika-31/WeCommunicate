@@ -22,6 +22,7 @@ const configuredOrigins = (process.env.FRONTEND_URLS || "")
 const allowedOrigins = [
   "http://localhost:5173",
   "http://127.0.0.1:5173",
+  "https://we-communicate.vercel.app",
   
   ...configuredOrigins
 ];

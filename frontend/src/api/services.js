@@ -45,31 +45,27 @@ export const authService = {
       const response = await API.post('/auth/login', credentials);
       return response.data;
     } catch (err) {
-      // Check for user-specified admin credentials admin@gmail.com / 1234567890
-      if (
-        credentials.email?.toLowerCase() === 'admin@gmail.com' &&
-        credentials.password === '1234567890'
-      ) {
-        const adminUser = {
-          _id: 'u_admin_special',
-          name: 'System Admin',
-          email: 'admin@gmail.com',
-          role: 'ADMIN',
-          residentType: 'OWNER',
-          community: 'Emerald Towers Enclave',
-          profileImage: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=400',
-        };
+      if (err.response) {
         return {
-          success: true,
-          token: 'mock-jwt-token-admin-' + Date.now(),
-          user: adminUser,
+          success: false,
+          message: err.response.data?.message || 'Login failed.',
         };
       }
 
-      // Fallback matching mock user
-      const found = mockUsers.find(
-        (u) => u.email.toLowerCase() === credentials.email.toLowerCase()
-      ) || mockUsers[0];
+      const demoPasswords = {
+        'admin@gmail.com': '1234567890',
+        'admin@wecommunicate.com': 'password123',
+        'manager@wecommunicate.com': 'password123',
+        'rahul@wecommunicate.com': 'password123',
+        'priya@wecommunicate.com': 'password123',
+      };
+      const email = credentials.email?.trim().toLowerCase();
+      const found = mockUsers.find((u) => u.email.toLowerCase() === email);
+
+      if (!found || demoPasswords[email] !== credentials.password) {
+        return { success: false, message: 'Invalid email or password.' };
+      }
+
       return {
         success: true,
         token: 'mock-jwt-token-' + Date.now(),
@@ -110,8 +106,10 @@ export const authService = {
       const response = await API.get('/auth/me');
       return response.data;
     } catch (err) {
-      const savedUser = getStored('current_user', mockUsers[0]);
-      return { success: true, user: savedUser };
+      const savedUser = getStored('current_user', null);
+      return savedUser
+        ? { success: true, user: savedUser }
+        : { success: false, message: 'Not authenticated.' };
     }
   },
 };
