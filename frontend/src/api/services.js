@@ -41,8 +41,13 @@ let mockCommunities = getStored('communities', initialCommunities);
 // AUTH SERVICES
 export const authService = {
   login: async (credentials) => {
+    const normalizedCredentials = {
+      ...credentials,
+      email: credentials.email?.trim().toLowerCase(),
+    };
+
     try {
-      const response = await API.post('/auth/login', credentials);
+      const response = await API.post('/auth/login', normalizedCredentials);
       return response.data;
     } catch (err) {
       if (err.response) {
@@ -59,7 +64,7 @@ export const authService = {
         'rahul@wecommunicate.com': 'password123',
         'priya@wecommunicate.com': 'password123',
       };
-      const email = credentials.email?.trim().toLowerCase();
+      const email = normalizedCredentials.email;
       const found = mockUsers.find((u) => u.email.toLowerCase() === email);
 
       if (!found || demoPasswords[email] !== credentials.password) {
@@ -75,20 +80,39 @@ export const authService = {
   },
 
   register: async (userData) => {
+    const normalizedUserData = {
+      ...userData,
+      email: userData.email?.trim().toLowerCase(),
+    };
+
     try {
-      const response = await API.post('/auth/register', userData);
+      const response = await API.post('/auth/register', normalizedUserData);
       return response.data;
     } catch (err) {
+      if (err.response) {
+        return {
+          success: false,
+          message: err.response.data?.message || 'Registration failed.',
+        };
+      }
+
+      const existingUser = mockUsers.find(
+        (user) => user.email.toLowerCase() === normalizedUserData.email
+      );
+      if (existingUser) {
+        return { success: false, message: 'User already exists.' };
+      }
+
       const newUser = {
         _id: 'u_' + Date.now(),
-        name: userData.name,
-        email: userData.email,
-        phone: userData.phone || '',
-        role: userData.role || 'USER',
-        residentType: userData.residentType || 'OWNER',
-        community: userData.community || 'Emerald Towers Enclave',
-        block: mockBlocks.find((b) => b._id === userData.block) || mockBlocks[0],
-        house: mockHouses.find((h) => h._id === userData.house) || { houseNumber: userData.houseNumber || 'A-101' },
+        name: normalizedUserData.name,
+        email: normalizedUserData.email,
+        phone: normalizedUserData.phone || '',
+        role: 'USER',
+        residentType: normalizedUserData.residentType || 'OWNER',
+        community: normalizedUserData.community || 'Emerald Towers Enclave',
+        block: mockBlocks.find((b) => b._id === normalizedUserData.block) || mockBlocks[0],
+        house: mockHouses.find((h) => h._id === normalizedUserData.house) || { houseNumber: normalizedUserData.houseNumber || 'A-101' },
         profileImage: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=400',
       };
       mockUsers.push(newUser);

@@ -23,7 +23,16 @@ const register = async (req, res) => {
       block
     } = req.body;
 
-    const existingUser = await User.findOne({ email });
+    const normalizedEmail = email?.trim().toLowerCase();
+
+    if (!name || !normalizedEmail || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Name, email, and password are required"
+      });
+    }
+
+    const existingUser = await User.findOne({ email: normalizedEmail });
 
     if (existingUser) {
       return res.status(400).json({
@@ -36,10 +45,10 @@ const register = async (req, res) => {
 
     const user = await User.create({
       name,
-      email,
+      email: normalizedEmail,
       password: hashedPassword,
       phone,
-      role: role || "USER",
+      role: "USER",
       residentType,
       house,
       block
@@ -72,8 +81,9 @@ const register = async (req, res) => {
 const login = async (req, res) => {
   try {
     const { email, password } = req.body;
+    const normalizedEmail = email?.trim().toLowerCase();
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: normalizedEmail });
 
     if (!user) {
       return res.status(401).json({
