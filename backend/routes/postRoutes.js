@@ -7,8 +7,11 @@ const {
   getPostById,
   updatePost,
   deletePost,
+  togglePinPost,
+  acknowledgePost,
   likePost,
-  commentPost
+  commentPost,
+  deleteComment
 } = require("../controllers/postController");
 
 const protect = require("../middleware/authMiddleware");
@@ -52,6 +55,20 @@ router.delete(
   deletePost
 );
 
+// Toggle Pin / Unpin
+router.patch(
+  "/:id/pin",
+  protect,
+  togglePinPost
+);
+
+// Acknowledge Notice Receipt
+router.post(
+  "/:id/acknowledge",
+  protect,
+  acknowledgePost
+);
+
 // Like / Unlike
 router.post(
   "/:id/like",
@@ -66,5 +83,8 @@ router.post(
   commentPost
 );
 
+
+// Delete comment
+router.delete("/:id/comment/:commentId", protect, deleteComment);
 
 module.exports = router;

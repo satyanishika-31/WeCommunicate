@@ -8,10 +8,12 @@ const createPost = async (req, res) => {
       type,
       title,
       description,
-      block
+      image: imageUrl,
+      block,
+      isUrgent
     } = req.body;
 
-    const image = req.file ? req.file.path : null;
+    const image = req.file ? `/uploads/${req.file.filename}` : (imageUrl || null);
 
     const post = await Post.create({
       author: req.user._id,
@@ -19,7 +21,8 @@ const createPost = async (req, res) => {
       title,
       description,
       image,
-      block
+      block,
+      isUrgent: isUrgent === true || isUrgent === 'true'
     });
 
     res.status(201).json({
@@ -44,7 +47,8 @@ const getPosts = async (req, res) => {
       .populate("author", "name profileImage")
       .populate("block", "name blockNumber")
       .populate("comments.user", "name profileImage")
-      .sort({ createdAt: -1 });
+      .populate("acknowledgements.user", "name houseNumber email")
+      .sort({ isPinned: -1, createdAt: -1 });
 
     res.status(200).json({
       success: true,
@@ -107,7 +111,7 @@ const updatePost = async (req, res) => {
     post.type = req.body.type || post.type;
 
     if (req.file) {
-      post.image = req.file.path;
+      post.image = `/uploads/${req.file.filename}`;
     }
 
     await post.save();
@@ -139,11 +143,106 @@ const deletePost = async (req, res) => {
       });
     }
 
+    if (post.author.toString() !== req.user._id.toString() && req.user.role !== "ADMIN") {
+      return res.status(403).json({
+        success: false,
+        message: "You are not authorized to delete this post"
+      });
+    }
+
     await post.deleteOne();
 
     res.status(200).json({
       success: true,
       message: "Post deleted successfully"
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+
+// TOGGLE PIN POST
+const togglePinPost = async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.id);
+
+    if (!post) {
+      return res.status(404).json({
+        success: false,
+        message: "Post not found"
+      });
+    }
+
+    if (post.author.toString() !== req.user._id.toString() && req.user.role !== "ADMIN") {
+      return res.status(403).json({
+        success: false,
+        message: "You are not authorized to pin or unpin this post"
+      });
+    }
+
+    post.isPinned = !post.isPinned;
+    await post.save();
+
+    res.status(200).json({
+      success: true,
+      message: post.isPinned ? "Post pinned to top" : "Post unpinned",
+      isPinned: post.isPinned,
+      post
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+// ACKNOWLEDGE NOTICE / POST (Delivery Confirmation)
+const acknowledgePost = async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.id);
+
+    if (!post) {
+      return res.status(404).json({
+        success: false,
+        message: "Notice / Post not found"
+      });
+    }
+
+    if (!post.acknowledgements) {
+      post.acknowledgements = [];
+    }
+
+    const alreadyAcked = post.acknowledgements.some(
+      (a) => a.user?.toString() === req.user._id.toString()
+    );
+
+    if (alreadyAcked) {
+      post.acknowledgements = post.acknowledgements.filter(
+        (a) => a.user?.toString() !== req.user._id.toString()
+      );
+    } else {
+      post.acknowledgements.push({
+        user: req.user._id,
+        acknowledgedAt: new Date()
+      });
+    }
+
+    await post.save();
+    await post.populate("acknowledgements.user", "name houseNumber email");
+
+    res.status(200).json({
+      success: true,
+      message: alreadyAcked ? "Notice acknowledgement removed" : "Notice confirmed and acknowledged",
+      acknowledged: !alreadyAcked,
+      acknowledgementsCount: post.acknowledgements.length,
+      acknowledgements: post.acknowledgements
     });
 
   } catch (error) {
@@ -230,12 +329,42 @@ const commentPost = async (req, res) => {
 };
 
 
+// DELETE COMMENT
+const deleteComment = async (req, res) => {
+  try {
+    const { id, commentId } = req.params;
+    const post = await Post.findById(id);
+    if (!post) {
+      return res.status(404).json({ success: false, message: 'Post not found' });
+    }
+    const comment = post.comments.id(commentId);
+    if (!comment) {
+      return res.status(404).json({ success: false, message: 'Comment not found' });
+    }
+    const isCommentAuthor = comment.user.toString() === req.user._id.toString();
+    const isPostAuthor = post.author.toString() === req.user._id.toString();
+    const isAdmin = req.user.role === 'ADMIN';
+    if (!isCommentAuthor && !isPostAuthor && !isAdmin) {
+      return res.status(403).json({ success: false, message: 'You are not authorized to delete this comment' });
+    }
+    post.comments.pull(commentId);
+    await post.save();
+    await post.populate('comments.user', 'name profileImage');
+    res.status(200).json({ success: true, message: 'Comment deleted successfully', comments: post.comments, post });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
   createPost,
   getPosts,
   getPostById,
   updatePost,
   deletePost,
+  togglePinPost,
+  acknowledgePost,
   likePost,
-  commentPost
+  commentPost,
+  deleteComment
 };

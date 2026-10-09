@@ -13,46 +13,94 @@ const Register = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
-  const [community, setCommunity] = useState('Emerald Towers Enclave');
+  const [community, setCommunity] = useState('');
+  const [selectedBlock, setSelectedBlock] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [residentType, setResidentType] = useState('OWNER');
-  const [houseNumber, setHouseNumber] = useState('A-101');
+  const [houseNumber, setHouseNumber] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const [communitiesList, setCommunitiesList] = useState([
-    'Emerald Towers Enclave',
-    'Sapphire Heights Society',
-    'Ruby Court Residency',
-    'Diamond Crest Community',
-    'Palm Groves Society',
-    'Sunset Villa Enclave',
-  ]);
+  const [rawCommunities, setRawCommunities] = useState([]);
+  const [availableBlocks, setAvailableBlocks] = useState([]);
+  const [availableFlats, setAvailableFlats] = useState([]);
 
   useEffect(() => {
     const fetchCommunities = async () => {
-      const comms = await metaService.getCommunities();
-      if (comms && comms.length > 0) {
-        const names = comms.map((c) => c.name);
-        setCommunitiesList(Array.from(new Set([...names, ...communitiesList])));
+      try {
+        const comms = await metaService.getCommunities();
+        if (comms && comms.length > 0) {
+          setRawCommunities(comms);
+          setCommunity(comms[0].name);
+          updateBlocksAndFlats(comms[0]);
+        }
+      } catch (err) {
+        console.error('Failed to load communities:', err);
       }
     };
     fetchCommunities();
   }, []);
 
+  const updateBlocksAndFlats = (commObj) => {
+    if (!commObj) return;
+    const blocks = commObj.blocksList && commObj.blocksList.length > 0
+      ? commObj.blocksList
+      : ['Block A', 'Block B', 'Block C'];
+    setAvailableBlocks(blocks);
+    setSelectedBlock(blocks[0] || '');
+
+    const flats = commObj.flatsList && commObj.flatsList.length > 0
+      ? commObj.flatsList
+      : ['101', '102', '103', '201', '202', '203'];
+    setAvailableFlats(flats);
+    setHouseNumber(flats[0] ? `${blocks[0] ? blocks[0] + '-' : ''}${flats[0]}` : '101');
+  };
+
+  const handleCommunityChange = (selectedName) => {
+    setCommunity(selectedName);
+    const commObj = rawCommunities.find((c) => c.name === selectedName);
+    if (commObj) {
+      updateBlocksAndFlats(commObj);
+    }
+  };
+
+  const handleBlockChange = (blockVal) => {
+    setSelectedBlock(blockVal);
+    // Suggest houseNumber with prefix
+    const baseFlat = availableFlats[0] || '101';
+    setHouseNumber(`${blockVal ? blockVal + '-' : ''}${baseFlat}`);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+
+    if (!phone.trim()) {
+      setError('Phone number is required.');
+      return;
+    }
+
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters long.');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError('Passwords do not match. Please ensure both passwords match.');
+      return;
+    }
+
     setLoading(true);
 
     const res = await register({
       name,
       email,
-      phone,
+      phone: phone.trim(),
       community,
       password,
       residentType,
-      houseNumber,
+      houseNumber: houseNumber.trim(),
       role: 'USER',
     });
 
@@ -149,6 +197,21 @@ const Register = () => {
               />
             </div>
 
+            {/* Phone Number */}
+            <div>
+              <label className="block text-[11px] font-semibold text-[#F7F0DF] uppercase tracking-wider mb-2">
+                Phone Number
+              </label>
+              <input
+                type="tel"
+                required
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="+91 98765 43210"
+                className="w-full px-4 py-3 rounded-xl bg-[#F5EFE1] text-xs sm:text-sm text-[#542612] placeholder-[#542612]/50 border border-[#542612]/20 focus:outline-none focus:border-[#542612] transition-all font-sans"
+              />
+            </div>
+
             {/* COMMUNITY SELECTION DROPDOWN */}
             <div>
               <label className="block text-[11px] font-semibold text-[#F7F0DF] uppercase tracking-wider mb-2 flex items-center justify-between">
@@ -157,46 +220,88 @@ const Register = () => {
               </label>
               <select
                 value={community}
-                onChange={(e) => setCommunity(e.target.value)}
+                onChange={(e) => handleCommunityChange(e.target.value)}
                 className="w-full px-4 py-3 rounded-xl bg-[#F5EFE1] text-xs sm:text-sm text-[#542612] border border-[#542612]/20 focus:outline-none focus:border-[#542612] transition-all font-sans"
               >
-                {communitiesList.map((comm) => (
-                  <option key={comm} value={comm} className="bg-[#F5EFE1] text-[#542612]">
-                    {comm}
+                {rawCommunities.map((comm) => (
+                  <option key={comm._id || comm.name} value={comm.name} className="bg-[#F5EFE1] text-[#542612]">
+                    {comm.name} ({comm.totalBlocks || comm.blocksList?.length || 0} Blocks)
                   </option>
                 ))}
               </select>
             </div>
 
-            {/* Flat Number & Resident Type Row */}
+            {/* Block & Flat Selection Row */}
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-[11px] font-semibold text-[#F7F0DF] uppercase tracking-wider mb-2">
-                  Flat Number
+                  Block / Tower
                 </label>
-                <input
-                  type="text"
-                  required
-                  value={houseNumber}
-                  onChange={(e) => setHouseNumber(e.target.value)}
-                  placeholder="e.g. A-101"
-                  className="w-full px-4 py-3 rounded-xl bg-[#F5EFE1] text-xs sm:text-sm text-[#542612] placeholder-[#542612]/50 border border-[#542612]/20 focus:outline-none focus:border-[#542612] font-sans"
-                />
+                {availableBlocks.length > 0 ? (
+                  <select
+                    value={selectedBlock}
+                    onChange={(e) => handleBlockChange(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl bg-[#F5EFE1] text-xs sm:text-sm text-[#542612] border border-[#542612]/20 focus:outline-none focus:border-[#542612] transition-all font-sans"
+                  >
+                    {availableBlocks.map((blk) => (
+                      <option key={blk} value={blk} className="bg-[#F5EFE1] text-[#542612]">
+                        {blk}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    value={selectedBlock}
+                    onChange={(e) => handleBlockChange(e.target.value)}
+                    placeholder="e.g. Block A"
+                    className="w-full px-4 py-3 rounded-xl bg-[#F5EFE1] text-xs sm:text-sm text-[#542612] border border-[#542612]/20 focus:outline-none focus:border-[#542612] font-sans"
+                  />
+                )}
               </div>
 
               <div>
                 <label className="block text-[11px] font-semibold text-[#F7F0DF] uppercase tracking-wider mb-2">
-                  Resident Type
+                  Flat Number
                 </label>
-                <select
-                  value={residentType}
-                  onChange={(e) => setResidentType(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl bg-[#F5EFE1] text-xs sm:text-sm text-[#542612] border border-[#542612]/20 focus:outline-none focus:border-[#542612] font-sans"
-                >
-                  <option value="OWNER" className="bg-[#F5EFE1] text-[#542612]">Owner</option>
-                  <option value="TENANT" className="bg-[#F5EFE1] text-[#542612]">Tenant</option>
-                </select>
+                {availableFlats.length > 0 ? (
+                  <select
+                    value={houseNumber.replace(`${selectedBlock}-`, '')}
+                    onChange={(e) => setHouseNumber(`${selectedBlock ? selectedBlock + '-' : ''}${e.target.value}`)}
+                    className="w-full px-4 py-3 rounded-xl bg-[#F5EFE1] text-xs sm:text-sm text-[#542612] border border-[#542612]/20 focus:outline-none focus:border-[#542612] transition-all font-sans"
+                  >
+                    {availableFlats.map((flt) => (
+                      <option key={flt} value={flt} className="bg-[#F5EFE1] text-[#542612]">
+                        {flt}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    required
+                    value={houseNumber}
+                    onChange={(e) => setHouseNumber(e.target.value)}
+                    placeholder="e.g. A-101"
+                    className="w-full px-4 py-3 rounded-xl bg-[#F5EFE1] text-xs sm:text-sm text-[#542612] placeholder-[#542612]/50 border border-[#542612]/20 focus:outline-none focus:border-[#542612] font-sans"
+                  />
+                )}
               </div>
+            </div>
+
+            {/* Resident Type */}
+            <div>
+              <label className="block text-[11px] font-semibold text-[#F7F0DF] uppercase tracking-wider mb-2">
+                Resident Type
+              </label>
+              <select
+                value={residentType}
+                onChange={(e) => setResidentType(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl bg-[#F5EFE1] text-xs sm:text-sm text-[#542612] border border-[#542612]/20 focus:outline-none focus:border-[#542612] font-sans"
+              >
+                <option value="OWNER" className="bg-[#F5EFE1] text-[#542612]">Owner</option>
+                <option value="TENANT" className="bg-[#F5EFE1] text-[#542612]">Tenant</option>
+              </select>
             </div>
 
             {/* Password */}
@@ -209,7 +314,22 @@ const Register = () => {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Min. 8 character"
+                placeholder="Min. 6 characters"
+                className="w-full px-4 py-3 rounded-xl bg-[#F5EFE1] text-xs sm:text-sm text-[#542612] placeholder-[#542612]/50 border border-[#542612]/20 focus:outline-none focus:border-[#542612] transition-all font-sans"
+              />
+            </div>
+
+            {/* Confirm Password */}
+            <div>
+              <label className="block text-[11px] font-semibold text-[#F7F0DF] uppercase tracking-wider mb-2">
+                Confirm Password
+              </label>
+              <input
+                type="password"
+                required
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Re-enter your password"
                 className="w-full px-4 py-3 rounded-xl bg-[#F5EFE1] text-xs sm:text-sm text-[#542612] placeholder-[#542612]/50 border border-[#542612]/20 focus:outline-none focus:border-[#542612] transition-all font-sans"
               />
             </div>

@@ -9,24 +9,32 @@ const createComplaint = async (req, res) => {
       description,
       category,
       block,
-      house
+      house,
+      flatNumber,
+      intakeRoute,
+      assignedHandlerName
     } = req.body;
 
-    const image = req.file ? req.file.path : null;
+    const image = req.file ? `/uploads/${req.file.filename}` : null;
+    const ticketId = `CMP-${Math.floor(1000 + Math.random() * 9000)}`;
 
     const complaint = await Complaint.create({
+      ticketId,
       raisedBy: req.user._id,
       title,
       description,
-      category,
-      block,
-      house,
+      category: category || "MAINTENANCE",
+      block: block || req.user.block || null,
+      house: house || req.user.house || null,
+      flatNumber: flatNumber || req.user.houseNumber || "A-101",
+      intakeRoute: intakeRoute || "RESIDENT_APP",
+      assignedHandlerName: assignedHandlerName || null,
       image
     });
 
     res.status(201).json({
       success: true,
-      message: "Complaint raised successfully",
+      message: `Complaint registered with Ticket #${ticketId}`,
       complaint
     });
 
@@ -141,11 +149,16 @@ const updateComplaint = async (req, res) => {
 // UPDATE STATUS
 const updateComplaintStatus = async (req, res) => {
   try {
-    const { status } = req.body;
+    const { status, resolutionNotes, assignedHandlerName } = req.body;
+
+    const updateData = { status };
+    if (resolutionNotes !== undefined) updateData.resolutionNotes = resolutionNotes;
+    if (assignedHandlerName !== undefined) updateData.assignedHandlerName = assignedHandlerName;
+    if (status === "RESOLVED") updateData.resolvedAt = new Date();
 
     const complaint = await Complaint.findByIdAndUpdate(
       req.params.id,
-      { status },
+      updateData,
       {
         new: true,
         runValidators: true

@@ -2,9 +2,7 @@ import axios from 'axios';
 
 // Create central Axios instance
 const API = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || (
-    import.meta.env.DEV ? '/api' : 'https://wecommunicate.onrender.com/api'
-  ),
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
   headers: {
     'Content-Type': 'application/json',
   },

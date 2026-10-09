@@ -1,13 +1,13 @@
+const path = require("path");
+const dotenv = require("dotenv");
+dotenv.config({ path: path.join(__dirname, ".env") });
+
 const express = require("express");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
-const dotenv = require("dotenv");
-const path = require("path");
 const fs = require("fs");
 
 const connectDB = require("./config/db");
-
-dotenv.config({ path: path.join(__dirname, ".env") });
 
 const app = express();
 
@@ -90,6 +90,8 @@ const complaintRoutes = require("./routes/complaintRoutes");
 const eventRoutes = require("./routes/eventRoutes");
 const businessRoutes = require("./routes/businessRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
+const communityRoutes = require("./routes/communityRoutes");
+const recordRoutes = require("./routes/recordRoutes");
 
 
 // Authentication
@@ -118,6 +120,8 @@ app.use("/api/businesses", businessRoutes);
 
 // Notifications
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/communities", communityRoutes);
+app.use("/api/records", recordRoutes);
 
 
 // ==================== HOME ROUTE ====================
@@ -172,7 +176,11 @@ const startServer = async () => {
 
   try {
 
-    await connectDB();
+    const connected = await connectDB();
+
+    if (!connected) {
+      console.warn("Starting backend without MongoDB. Auth APIs will fail until MongoDB is available.");
+    }
 
     app.listen(port, () => {
       console.log(`We Communicate Backend running on port ${port}`);
@@ -182,7 +190,9 @@ const startServer = async () => {
 
     console.error("Server startup failed:", error.message);
 
-    process.exit(1);
+    app.listen(port, () => {
+      console.log(`We Communicate Backend running on port ${port} without a database connection.`);
+    });
   }
 };
 

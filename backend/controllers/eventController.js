@@ -13,7 +13,7 @@ const createEvent = async (req, res) => {
       block
     } = req.body;
 
-    const poster = req.file ? req.file.path : null;
+    const poster = req.file ? `/uploads/${req.file.filename}` : null;
 
     const event = await Event.create({
       createdBy: req.user._id,

@@ -13,14 +13,14 @@ import { businessService } from '../api/services';
 import { useAuth } from '../context/AuthContext';
 
 const categories = [
-  { id: 'ALL', label: 'All Services 🏪' },
-  { id: 'BAKING', label: 'Home Bakers 🧁' },
-  { id: 'TUITION', label: 'Tutors & Coaching 📚' },
-  { id: 'TAILORING', label: 'Tailors & Fashion 🧵' },
-  { id: 'BEAUTY', label: 'Beauty Services 💄' },
-  { id: 'FITNESS', label: 'Fitness Trainers 🏋️' },
-  { id: 'ART', label: 'Artists & Crafts 🎨' },
-  { id: 'FOOD', label: 'Food & Catering 🍱' },
+  { id: 'ALL', label: 'All Services' },
+  { id: 'BAKING', label: 'Home Bakers' },
+  { id: 'TUITION', label: 'Tutors & Coaching' },
+  { id: 'TAILORING', label: 'Tailors & Fashion' },
+  { id: 'BEAUTY', label: 'Beauty Services' },
+  { id: 'FITNESS', label: 'Fitness Trainers' },
+  { id: 'ART', label: 'Artists & Crafts' },
+  { id: 'FOOD', label: 'Food & Catering' },
 ];
 
 const Businesses = () => {

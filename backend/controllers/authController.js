@@ -19,6 +19,8 @@ const register = async (req, res) => {
       phone,
       role,
       residentType,
+      community,
+      houseNumber,
       house,
       block
     } = req.body;
@@ -50,6 +52,8 @@ const register = async (req, res) => {
       phone,
       role: "USER",
       residentType,
+      community,
+      houseNumber,
       house,
       block
     });
@@ -62,16 +66,40 @@ const register = async (req, res) => {
       token,
       user: {
         id: user._id,
+        _id: user._id,
         name: user.name,
         email: user.email,
-        role: user.role
+        phone: user.phone || '',
+        role: user.role,
+        residentType: user.residentType || 'OWNER',
+        community: user.community || '',
+        houseNumber: user.houseNumber || '',
+        profileImage: user.profileImage || null
       }
     });
 
   } catch (error) {
+    console.error("Registration failed:", error);
+
+    if (error?.code === 11000 && error?.message?.includes("username_1")) {
+      return res.status(500).json({
+        success: false,
+        message:
+          "Registration could not be completed because the database has an outdated username rule. Please restart the backend and try again."
+      });
+    }
+
+    if (error?.code === 11000) {
+      return res.status(409).json({
+        success: false,
+        message:
+          "Registration could not be completed because an account with this email already exists."
+      });
+    }
+
     res.status(500).json({
       success: false,
-      message: error.message
+      message: "Registration could not be completed. Please try again."
     });
   }
 };
@@ -112,10 +140,15 @@ const login = async (req, res) => {
       token,
       user: {
         id: user._id,
+        _id: user._id,
         name: user.name,
         email: user.email,
+        phone: user.phone || '',
         role: user.role,
-        residentType: user.residentType
+        residentType: user.residentType || 'OWNER',
+        community: user.community || '',
+        houseNumber: user.houseNumber || '',
+        profileImage: user.profileImage || null
       }
     });
 

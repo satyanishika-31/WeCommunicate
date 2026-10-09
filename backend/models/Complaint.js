@@ -2,6 +2,11 @@ const mongoose = require("mongoose");
 
 const complaintSchema = new mongoose.Schema(
   {
+    ticketId: {
+      type: String,
+      unique: true
+    },
+
     raisedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
@@ -10,14 +15,28 @@ const complaintSchema = new mongoose.Schema(
 
     block: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Block",
-      required: true
+      ref: "Block"
     },
 
     house: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "House",
-      required: true
+      ref: "House"
+    },
+
+    flatNumber: {
+      type: String
+    },
+
+    intakeRoute: {
+      type: String,
+      enum: [
+        "RESIDENT_APP",
+        "SECURITY_GUARD",
+        "OFFICE_REGISTER",
+        "PHONE_ESCALATION",
+        "OTHER"
+      ],
+      default: "RESIDENT_APP"
     },
 
     title: {
@@ -42,7 +61,7 @@ const complaintSchema = new mongoose.Schema(
         "MAINTENANCE",
         "OTHER"
       ],
-      required: true
+      default: "MAINTENANCE"
     },
 
     image: {
@@ -59,9 +78,21 @@ const complaintSchema = new mongoose.Schema(
       default: "PENDING"
     },
 
+    assignedHandlerName: {
+      type: String
+    },
+
     assignedTo: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User"
+    },
+
+    resolutionNotes: {
+      type: String
+    },
+
+    resolvedAt: {
+      type: Date
     }
   },
   {

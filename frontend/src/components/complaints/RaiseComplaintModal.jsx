@@ -16,11 +16,20 @@ const categories = [
   'OTHER',
 ];
 
+const intakeRoutes = [
+  { id: 'RESIDENT_APP', label: 'Resident App (Direct)' },
+  { id: 'SECURITY_GUARD', label: 'Security Guard Intake (Gate)' },
+  { id: 'PHONE_ESCALATION', label: 'Phone Call to Committee' },
+  { id: 'OFFICE_REGISTER', label: 'Physical Register Book' },
+];
+
 const RaiseComplaintModal = ({ isOpen, onClose, onCreated }) => {
   const { user } = useAuth();
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('WATER');
   const [description, setDescription] = useState('');
+  const [intakeRoute, setIntakeRoute] = useState('RESIDENT_APP');
+  const [flatNumber, setFlatNumber] = useState(user?.houseNumber || 'A-101');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
@@ -28,7 +37,10 @@ const RaiseComplaintModal = ({ isOpen, onClose, onCreated }) => {
     if (!title.trim() || !description.trim()) return;
 
     setLoading(true);
-    const res = await complaintService.create({ title, category, description }, user);
+    const res = await complaintService.create(
+      { title, category, description, intakeRoute, flatNumber },
+      user
+    );
     setLoading(false);
 
     if (res.success && res.complaint) {
@@ -40,23 +52,56 @@ const RaiseComplaintModal = ({ isOpen, onClose, onCreated }) => {
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Raise New Complaint">
-      <form onSubmit={handleSubmit} className="space-y-4">
+    <Modal isOpen={isOpen} onClose={onClose} title="Register Maintenance Ticket">
+      <form onSubmit={handleSubmit} className="space-y-4 font-sans text-xs">
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs font-bold text-[#542612] dark:text-[#F7F0DF] uppercase tracking-wider mb-1.5">
+              Category
+            </label>
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="w-full px-3.5 py-2.5 rounded-xl bg-[#F7F0DF] dark:bg-[#542612] text-xs sm:text-sm font-semibold text-[#542612] dark:text-white border border-[#542612]/20 dark:border-[#F7F0DF]/30 focus:outline-none focus:ring-2 focus:ring-[#542612]"
+            >
+              {categories.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-[#542612] dark:text-[#F7F0DF] uppercase tracking-wider mb-1.5">
+              Reporting Channel / Route
+            </label>
+            <select
+              value={intakeRoute}
+              onChange={(e) => setIntakeRoute(e.target.value)}
+              className="w-full px-3.5 py-2.5 rounded-xl bg-[#F7F0DF] dark:bg-[#542612] text-xs sm:text-sm font-semibold text-[#542612] dark:text-white border border-[#542612]/20 dark:border-[#F7F0DF]/30 focus:outline-none focus:ring-2 focus:ring-[#542612]"
+            >
+              {intakeRoutes.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
         <div>
           <label className="block text-xs font-bold text-[#542612] dark:text-[#F7F0DF] uppercase tracking-wider mb-1.5">
-            Category
+            Flat / Unit Number
           </label>
-          <select
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            className="w-full px-4 py-2.5 rounded-xl bg-[#F7F0DF] dark:bg-[#542612] text-sm font-semibold text-[#542612] dark:text-white border border-[#542612]/20 dark:border-[#F7F0DF]/30 focus:outline-none focus:ring-2 focus:ring-[#542612]"
-          >
-            {categories.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
+          <input
+            type="text"
+            required
+            value={flatNumber}
+            onChange={(e) => setFlatNumber(e.target.value)}
+            placeholder="e.g. Block B - 402"
+            className="w-full px-3.5 py-2.5 rounded-xl bg-[#F7F0DF] dark:bg-[#542612] text-xs sm:text-sm text-[#542612] dark:text-white placeholder-[#542612]/50 border border-[#542612]/20 dark:border-[#F7F0DF]/30 focus:outline-none focus:ring-2 focus:ring-[#542612]"
+          />
         </div>
 
         <div>

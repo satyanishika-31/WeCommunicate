@@ -14,6 +14,7 @@ import {
   Settings,
   ShieldCheck,
   Building2,
+  FileText,
   LogOut,
   Sun,
   Moon,
@@ -25,7 +26,7 @@ import Badge from '../common/Badge';
 import Logo from '../common/Logo';
 
 const Sidebar = () => {
-  const { user, role, logout, switchRole, theme, toggleTheme } = useAuth();
+  const { user, role, logout, theme, toggleTheme } = useAuth();
   const { unreadCount } = useNotifications();
   const location = useLocation();
   const navigate = useNavigate();
@@ -35,6 +36,7 @@ const Sidebar = () => {
     { label: 'Explore', path: '/explore', icon: Search },
     { label: 'Create', path: '/create-post', icon: PlusCircle, highlight: true },
     { label: 'Notices', path: '/notices', icon: Megaphone },
+    { label: 'Records & Bylaws', path: '/records', icon: FileText },
     { label: 'Events', path: '/events', icon: Calendar },
     { label: 'Complaints', path: '/complaints', icon: Wrench },
     { label: 'Businesses', path: '/businesses', icon: Store },
@@ -49,6 +51,15 @@ const Sidebar = () => {
   if (role === 'ADMIN') {
     secondaryNavItems.unshift({
       label: 'Admin Panel',
+      path: '/admin',
+      icon: ShieldCheck,
+      isAdminBadge: true,
+    });
+  }
+
+  if (role === 'COMMUNITY_HEAD') {
+    secondaryNavItems.unshift({
+      label: 'Community Head Desk',
       path: '/admin',
       icon: ShieldCheck,
       isAdminBadge: true,
@@ -221,44 +232,7 @@ const Sidebar = () => {
           </nav>
         </div>
 
-        {/* Demo Live Role Switcher */}
-        <div className="p-3 bg-[#E5D3AF]/40 rounded-2xl border border-[#542612]/15">
-         <div className="text-[10px] font-bold text-white uppercase tracking-wider mb-2">
-            Switch Demo Role
-          </div>
-          <div className="grid grid-cols-3 gap-1">
-            <button
-              onClick={() => switchRole('USER')}
-              className={`py-1 px-1.5 rounded-lg text-[10px] font-bold transition-all ${
-                role === 'USER'
-                  ? 'bg-[#542612] text-[#FFFFFF] shadow-sm'
-                  : 'text-white hover:bg-[#E5D3AF]/60'
-              }`}
-            >
-              Resident
-            </button>
-            <button
-              onClick={() => switchRole('BLOCK_MANAGER')}
-              className={`py-1 px-1.5 rounded-lg text-[10px] font-bold transition-all ${
-                role === 'BLOCK_MANAGER'
-                  ? 'bg-[#542612] text-[#FFFFFF] shadow-sm'
-                  : 'text-white hover:bg-[#E5D3AF]/60'
-              }`}
-            >
-              Manager
-            </button>
-            <button
-              onClick={() => switchRole('ADMIN')}
-              className={`py-1 px-1.5 rounded-lg text-[10px] font-bold transition-all ${
-                role === 'ADMIN'
-                  ? 'bg-[#542612] text-[#FFFFFF] shadow-sm'
-                  : 'text-white hover:bg-[#E5D3AF]/60'
-              }`}
-            >
-              Admin
-            </button>
-          </div>
-        </div>
+
       </div>
 
       {/* Sidebar Footer User Profile */}

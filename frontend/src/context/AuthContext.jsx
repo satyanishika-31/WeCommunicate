@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { authService } from '../api/services';
+import { authService, metaService } from '../api/services';
 
 const AuthContext = createContext();
 
@@ -66,10 +66,16 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem('wecomm_current_user', JSON.stringify(matchingUser));
   };
 
-  const updateProfile = (updatedFields) => {
-    const updated = { ...user, ...updatedFields };
+  const updateProfile = async (updatedFields) => {
+    if (!user?.id && !user?._id) {
+      throw new Error('You must be logged in to update your profile.');
+    }
+
+    const response = await metaService.updateUser(user.id || user._id, updatedFields);
+    const updated = response.user;
     setUser(updated);
     localStorage.setItem('wecomm_current_user', JSON.stringify(updated));
+    return updated;
   };
 
   return (

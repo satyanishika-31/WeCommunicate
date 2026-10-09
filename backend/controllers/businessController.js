@@ -14,7 +14,7 @@ const createBusiness = async (req, res) => {
     } = req.body;
 
     const images = req.files
-      ? req.files.map(file => file.path)
+      ? req.files.map(file => `/uploads/${file.filename}`)
       : [];
 
     const business = await Business.create({
@@ -109,7 +109,7 @@ const updateBusiness = async (req, res) => {
     Object.assign(business, req.body);
 
     if (req.files) {
-      business.images = req.files.map(file => file.path);
+      business.images = req.files.map(file => `/uploads/${file.filename}`);
     }
 
     await business.save();
@@ -234,6 +234,28 @@ const closeBusiness = async (req, res) => {
   }
 };
 
+const addReview = async (req, res) => {
+  try {
+    const { rating, comment } = req.body;
+    if (!Number.isInteger(Number(rating)) || Number(rating) < 1 || Number(rating) > 5) {
+      return res.status(400).json({ success: false, message: "Rating must be between 1 and 5." });
+    }
+
+    const business = await Business.findById(req.params.id);
+    if (!business) {
+      return res.status(404).json({ success: false, message: "Business not found" });
+    }
+
+    business.reviews.push({ author: req.user._id, rating: Number(rating), comment });
+    await business.save();
+
+    const review = business.reviews[business.reviews.length - 1];
+    res.status(201).json({ success: true, business, review });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 
 // DELETE BUSINESS
 const deleteBusiness = async (req, res) => {
@@ -272,5 +294,6 @@ module.exports = {
   pauseBusiness,
   resumeBusiness,
   closeBusiness,
-  deleteBusiness
+  deleteBusiness,
+  addReview
 };

@@ -1,22 +1,10 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Star, ArrowRight, Phone, Clock, MapPin, Tag } from 'lucide-react';
+import { Star, ArrowRight, Phone, Clock, MapPin, Tag, Store } from 'lucide-react';
 import Avatar from '../common/Avatar';
 import Badge from '../common/Badge';
 
-const categoryIcons = {
-  BAKING: '🧁',
-  TUITION: '📚',
-  TAILORING: '🧵',
-  BEAUTY: '💄',
-  FITNESS: '🏋️',
-  ART: '🎨',
-  FOOD: '🍱',
-  OTHER: '🏪',
-};
-
 const BusinessCard = ({ business, onClick }) => {
-  const iconEmoji = categoryIcons[business.category] || '🏪';
 
   return (
     <motion.div
@@ -40,8 +28,8 @@ const BusinessCard = ({ business, onClick }) => {
               className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-500"
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-4xl bg-[#F7F0DF] dark:bg-[#542612]/60">
-              {iconEmoji}
+            <div className="w-full h-full flex items-center justify-center bg-[#F7F0DF] dark:bg-[#542612]/60 text-[#542612] dark:text-[#EAA627]">
+              <Store className="w-12 h-12 stroke-1" />
             </div>
           )}
 
@@ -52,8 +40,9 @@ const BusinessCard = ({ business, onClick }) => {
             <span className="text-[10px] text-[#542612]/60 font-medium">({business.reviewsCount || 12})</span>
           </div>
 
-          <div className="absolute top-3 left-3 bg-[#F5EFE1]/95 dark:bg-[#542612]/95 backdrop-blur-md text-[#542612] dark:text-white rounded-xl px-2.5 py-1 text-base shadow-md">
-            {iconEmoji}
+          <div className="absolute top-3 left-3 bg-[#F5EFE1]/95 dark:bg-[#542612]/95 backdrop-blur-md text-[#542612] dark:text-white rounded-xl px-2.5 py-1 text-xs font-bold shadow-md uppercase tracking-wider flex items-center gap-1">
+            <Store className="w-3 h-3 text-[#542612] dark:text-[#EAA627]" />
+            <span>{business.category || 'Service'}</span>
           </div>
         </div>
 

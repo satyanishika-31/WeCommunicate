@@ -65,21 +65,33 @@ const updateUser = async (req, res) => {
       });
     }
 
+    // Ensure only the user themselves or an ADMIN can update this profile
+    if (user._id.toString() !== req.user._id.toString() && req.user.role !== "ADMIN") {
+      return res.status(403).json({
+        success: false,
+        message: "You are not authorized to update this profile"
+      });
+    }
+
     const {
       name,
       phone,
       residentType,
+      houseNumber,
+      community,
       house,
       block,
       profileImage
     } = req.body;
 
-    user.name = name || user.name;
-    user.phone = phone || user.phone;
-    user.residentType = residentType || user.residentType;
-    user.house = house || user.house;
-    user.block = block || user.block;
-    user.profileImage = profileImage || user.profileImage;
+    if (name !== undefined) user.name = name;
+    if (phone !== undefined) user.phone = phone;
+    if (residentType !== undefined) user.residentType = residentType;
+    if (houseNumber !== undefined) user.houseNumber = houseNumber;
+    if (community !== undefined) user.community = community;
+    if (house !== undefined) user.house = house;
+    if (block !== undefined) user.block = block;
+    if (profileImage !== undefined) user.profileImage = profileImage;
 
     const updatedUser = await user.save();
 

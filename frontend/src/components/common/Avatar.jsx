@@ -34,7 +34,7 @@ const Avatar = ({
 
   return (
     <div className={`relative inline-block ${className}`}>
-      {src ? (
+      {src && src.trim() ? (
         <img
           src={src}
           alt={name}

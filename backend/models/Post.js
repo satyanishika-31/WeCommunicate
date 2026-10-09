@@ -63,7 +63,30 @@ const postSchema = new mongoose.Schema(
     block: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Block"
-    }
+    },
+
+    isPinned: {
+      type: Boolean,
+      default: false
+    },
+
+    isUrgent: {
+      type: Boolean,
+      default: false
+    },
+
+    acknowledgements: [
+      {
+        user: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User"
+        },
+        acknowledgedAt: {
+          type: Date,
+          default: Date.now
+        }
+      }
+    ]
   },
   {
     timestamps: true

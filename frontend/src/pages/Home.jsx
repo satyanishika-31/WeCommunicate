@@ -12,6 +12,10 @@ import {
   Megaphone,
   Heart,
   MessageSquare,
+  Send,
+  Bell,
+  Users,
+  Info,
 } from 'lucide-react';
 import PageContainer from '../components/layout/PageContainer';
 import Header from '../components/layout/Header';
@@ -39,25 +43,7 @@ const Home = () => {
   const [raiseComplaintOpen, setRaiseComplaintOpen] = useState(false);
   const [openBusinessOpen, setOpenBusinessOpen] = useState(false);
 
-  // Editable image link placeholders inspired by Image 2 design gallery layout
-  const heroGalleryImages = [
-    {
-      title: 'Community Moments',
-      url: 'https://images.unsplash.com/photo-1543269865-cbf427effbad?auto=format&fit=crop&q=80&w=600',
-    },
-    {
-      title: 'Green Spaces & Gardens',
-      url: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&q=80&w=600',
-    },
-    {
-      title: 'Serene Atmosphere',
-      url: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&q=80&w=600',
-    },
-    {
-      title: 'Festive Celebrations',
-      url: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&q=80&w=600',
-    },
-  ];
+ 
 
   const fetchData = async () => {
     setLoading(true);
@@ -138,68 +124,133 @@ const Home = () => {
     <PageContainer>
       <Header onSearch={handleSearch} />
 
-      {/* COMPACT COMMUNITY HERO SECTION */}
+      {/* HERO BANNER SECTION (MATCHING DESIGN 2) */}
       <motion.section
         initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="relative overflow-hidden rounded-3xl p-6 lg:p-10 bg-[#F7F0DF] dark:bg-[#542612] border border-[#542612]/20 dark:border-[#F7F0DF]/20 shadow-sm mb-8"
+        className="space-y-4 mb-8"
       >
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 mb-8">
-          <div className="max-w-2xl space-y-4">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#F7F0DF] dark:bg-[#542612] border border-[#542612]/30 text-[#542612] dark:text-[#F7F0DF] text-xs font-bold uppercase tracking-wider">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>We Communicate Community</span>
+        {/* Main Hero Card */}
+        <div className="relative overflow-hidden rounded bg-[#F4EFE6] dark:bg-[#3D1E10] border border-[#542612]/15 dark:border-[#542612]/30 shadow-sm min-h-[300px] lg:min-h-[360px] flex items-center justify-between">
+          {/* Building image positioned at right corner with multi-directional seamless blend */}
+          <div className="absolute right-0 top-0 bottom-0 w-full sm:w-3/5 lg:w-1/2 pointer-events-none overflow-hidden">
+            <img
+              src="/hero_apartment_garden.jpg"
+              alt="Community Living Architecture"
+              className="w-full h-full object-cover object-center"
+            />
+            {/* Seamless Left Fade into Warm Background */}
+            <div className="absolute inset-y-0 left-0 w-36 sm:w-56 bg-gradient-to-r from-[#F4EFE6] via-[#F4EFE6]/80 to-transparent dark:from-[#3D1E10] dark:via-[#3D1E10]/80 dark:to-transparent" />
+            {/* Seamless Top & Bottom soft blends */}
+            <div className="absolute inset-x-0 top-0 h-12 bg-gradient-to-b from-[#F4EFE6]/60 to-transparent dark:from-[#3D1E10]/60 dark:to-transparent" />
+            <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#F4EFE6]/80 to-transparent dark:from-[#3D1E10]/80 dark:to-transparent" />
+          </div>
+
+          {/* Left Text Content & Action Buttons */}
+          <div className="relative z-10 p-6 sm:p-10 lg:p-12 max-w-xl space-y-4">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#EFEAD9]/90 dark:bg-[#542612]/80 border border-[#542612]/20 text-[#542612] dark:text-[#F7F0DF] text-[11px] font-bold uppercase tracking-wider shadow-xs backdrop-blur-sm">
+              <MessageSquare className="w-3.5 h-3.5 text-[#542612] dark:text-[#EAA627]" />
+              <span>Communications & Community</span>
             </div>
 
-            {/* Serif Headline */}
-            <h1 className="font-serif text-3xl sm:text-5xl lg:text-6xl font-normal text-[#542612] dark:text-white tracking-tight leading-none">
-              Your Path To <br />
+            <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-bold text-[#542612] dark:text-white tracking-tight leading-[1.15]">
+              A Stronger Community, <br />
               <span className="italic font-serif text-[#542612] dark:text-[#F7F0DF]">
-                Community & Living
+                Together
               </span>
             </h1>
 
-            <p className="text-sm sm:text-base text-[#542612]/80 dark:text-[#F7F0DF]/80 font-sans leading-relaxed max-w-lg">
-              Connecting residents, empowering local home businesses, and maintaining peace of mind across every block.
+            <p className="text-xs sm:text-sm text-[#542612]/85 dark:text-[#F7F0DF]/90 font-sans leading-relaxed max-w-md">
+              Stay informed, get things done, and be part of a more connected and active community.
             </p>
-          </div>
 
-          <div className="flex flex-wrap items-center gap-3">
-            <button
-              onClick={() => navigate('/explore')}
-              className="px-6 py-3 rounded-full bg-[#542612] text-white font-bold text-sm hover:bg-[#542612] transition-all shadow-md hover:scale-105 active:scale-95"
-            >
-              Explore Community
-            </button>
-            <button
-              onClick={() => navigate('/create-post')}
-              className="px-6 py-3 rounded-full border border-[#542612] dark:border-white text-[#542612] dark:text-white font-bold text-sm hover:bg-[#F7F0DF]/20 transition-all hover:scale-105 active:scale-95"
-            >
-              + Share Post
-            </button>
+            <div className="flex flex-wrap items-center gap-3 pt-2">
+              <button
+                onClick={() => navigate('/notices')}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#542612] text-white font-bold text-xs sm:text-sm hover:bg-[#3d1b0c] transition-all shadow-md hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+              >
+                <MessageSquare className="w-4 h-4" />
+                <span>View Announcements</span>
+                <span className="text-xs">→</span>
+              </button>
+
+              <button
+                onClick={() => navigate('/create-post')}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#F4EFE6]/90 dark:bg-[#542612] border border-[#542612]/30 text-[#542612] dark:text-white font-bold text-xs sm:text-sm hover:bg-white transition-all shadow-xs hover:scale-[1.02] active:scale-[0.98] cursor-pointer backdrop-blur-sm"
+              >
+                <Send className="w-3.5 h-3.5" />
+                <span>Send Notification</span>
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* IMAGE GALLERY GRID */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 pt-2">
-          {heroGalleryImages.map((img, idx) => (
-            <motion.div
-              key={idx}
-              whileHover={{ scale: 1.03 }}
-              className="relative h-44 sm:h-52 rounded-2xl overflow-hidden bg-[#F5EFE1] dark:bg-[#542612] shadow-sm border border-[#542612]/15 group cursor-pointer"
-            >
-              <img
-                src={img.url}
-                alt={img.title}
-                className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-500"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#542612]/90 via-transparent to-transparent opacity-80 group-hover:opacity-95 transition-opacity" />
-              <div className="absolute bottom-3 left-3 right-3 text-white text-xs font-serif font-bold">
-                {img.title}
-              </div>
-            </motion.div>
-          ))}
+        {/* 5 Bottom Nav / Feature Cards (Matching Image 2 exactly) */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 pt-1">
+          {[
+            {
+              title: 'Communication & Announcements',
+              path: '/notices',
+              icon: Megaphone,
+              bgImage: 'https://www.shutterstock.com/image-photo/couple-using-smartphone-window-display-600nw-1895729401.jpg',
+            },
+            {
+              title: 'Complaints & Maintenance',
+              path: '/complaints',
+              icon: Wrench,
+              bgImage: 'bg_image.png',
+            },
+            {
+              title: 'Events & Community Activities',
+              path: '/events',
+              icon: Calendar,
+              bgImage: 'bg_img2.jpg',
+            },
+            {
+              title: 'Resident Directory & Services',
+              path: '/businesses',
+              icon: Users,
+              bgImage: 'bg_img3.jpg',
+            },
+            {
+              title: 'Community Information',
+              path: '/records',
+              icon: Info,
+              bgImage: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&q=80&w=600',
+            },
+          ].map((item, idx) => {
+            const Icon = item.icon;
+            return (
+              <motion.div
+                key={idx}
+                whileHover={{ y: -3, scale: 1.02 }}
+                onClick={() => navigate(item.path)}
+                className="relative h-32 sm:h-36 rounded overflow-hidden bg-[#542612] shadow-sm border border-[#542612]/100 cursor-pointer group flex flex-col justify-end p-3.5 transition-all"
+              >
+                <img
+                  src={item.bgImage}
+                  alt={item.title}
+                  className="absolute inset-0 w-full h-full object-cover group-hover:scale-108 transition-transform duration-500 opacity-70 group-hover:opacity-80"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#3D1E10] via-[#3D1E10]/50 to-transparent" />
+
+                <div className="relative z-10 flex items-center justify-between gap-2 text-white">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="w-7 h-7 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center shrink-0 border border-white/20">
+                      <Icon className="w-3.5 h-3.5 text-white" />
+                    </div>
+                    <span className="text-[11px] sm:text-xs font-bold leading-tight line-clamp-2">
+                      {item.title}
+                    </span>
+                  </div>
+                  <span className="text-white/80 group-hover:text-white group-hover:translate-x-0.5 transition-all text-xs shrink-0">
+                    →
+                  </span>
+                </div>
+              </motion.div>
+            );
+          })}
         </div>
       </motion.section>
 
@@ -219,7 +270,7 @@ const Home = () => {
                 transition={{ delay: index * 0.08 }}
                 whileHover={{ y: -5, scale: 1.02 }}
                 onClick={qa.action}
-                className={`group relative bg-[#F5EFE1] dark:bg-[#542612] p-4 sm:p-5 rounded-2xl border ${qa.borderColor} shadow-sm hover:shadow-xl hover:shadow-[#542612]/5 cursor-pointer overflow-hidden transition-all duration-300 flex flex-col justify-between`}
+                className={`group relative bg-[#F5EFE1] dark:bg-[#542612] p-4 sm:p-5 rounded border ${qa.borderColor} shadow-sm hover:shadow-xl hover:shadow-[#542612]/5 cursor-pointer overflow-hidden transition-all duration-300 flex flex-col justify-between`}
               >
                 <div className={`absolute inset-0 bg-gradient-to-br ${qa.gradient} opacity-0 group-hover:opacity-100 transition-opacity`} />
                 <div className="relative z-10 space-y-3">
@@ -289,6 +340,8 @@ const Home = () => {
                   post={post}
                   onLikeToggle={fetchData}
                   onCommentAdded={fetchData}
+                  onPostDeleted={fetchData}
+                  onPostPinned={fetchData}
                 />
               ))}
             </div>
@@ -298,7 +351,7 @@ const Home = () => {
         {/* Right Sidebar Spotlight Widgets (Events & Businesses) */}
         <div className="space-y-6">
           {/* Upcoming Events Spotlight */}
-          <div className="bg-[#F5EFE1] dark:bg-[#542612] rounded-3xl p-5 border border-[#542612]/15 dark:border-[#F7F0DF]/20 shadow-sm space-y-4">
+          <div className="bg-[#F5EFE1] dark:bg-[#542612] rounded p-5 border border-[#542612]/15 dark:border-[#F7F0DF]/20 shadow-sm space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-[#542612] dark:text-[#F7F0DF]" />
@@ -320,7 +373,7 @@ const Home = () => {
           </div>
 
           {/* Resident Businesses Discovery Widget */}
-          <div className="bg-[#F5EFE1] dark:bg-[#542612] rounded-3xl p-5 border border-[#542612]/15 dark:border-[#F7F0DF]/20 shadow-sm space-y-4">
+          <div className="bg-[#F5EFE1] dark:bg-[#542612] rounded p-5 border border-[#542612]/15 dark:border-[#F7F0DF]/20 shadow-sm space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Store className="w-4 h-4 text-[#542612] dark:text-[#F7F0DF]" />

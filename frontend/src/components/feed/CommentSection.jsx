@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { Send } from 'lucide-react';
+import { Send, Trash2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import Avatar from '../common/Avatar';
 
-const CommentSection = ({ comments = [], onAddComment }) => {
+const CommentSection = ({ comments = [], onAddComment, onDeleteComment, postAuthorId }) => {
   const { user } = useAuth();
   const [commentText, setCommentText] = useState('');
+
+  const currentUserId = user?._id || user?.id;
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -19,33 +21,58 @@ const CommentSection = ({ comments = [], onAddComment }) => {
       {/* Existing Comments */}
       {comments.length > 0 && (
         <div className="space-y-3 max-h-60 overflow-y-auto pr-1 custom-scrollbar">
-          {comments.map((c, i) => (
-            <div key={c._id || i} className="flex gap-2.5 text-xs">
-              <Avatar
-                src={c.user?.profileImage}
-                name={c.user?.name || 'Resident'}
-                size="sm"
-              />
-              <div className="flex-1 bg-[#F7F0DF] dark:bg-[#542612]/60 p-3 rounded-2xl border border-[#542612]/15 dark:border-[#F7F0DF]/20">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="font-bold text-[#542612] dark:text-white">
-                    {c.user?.name || 'Resident'}
-                  </span>
-                  <span className="text-[10px] text-[#542612]/60">
-                    {c.createdAt
-                      ? new Date(c.createdAt).toLocaleTimeString([], {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })
-                      : 'Just now'}
-                  </span>
+          {comments.map((c, i) => {
+            const commentAuthorId = c.user?._id || c.user?.id || c.user;
+            const canDelete =
+              currentUserId &&
+              (commentAuthorId?.toString() === currentUserId?.toString() ||
+                postAuthorId?.toString() === currentUserId?.toString() ||
+                user?.role === 'ADMIN');
+
+            return (
+              <div key={c._id || i} className="flex gap-2.5 text-xs group/comment">
+                <Avatar
+                  src={c.user?.profileImage}
+                  name={c.user?.name || 'Resident'}
+                  size="sm"
+                />
+                <div className="flex-1 bg-[#F7F0DF] dark:bg-[#542612]/60 p-3 rounded-2xl border border-[#542612]/15 dark:border-[#F7F0DF]/20">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-bold text-[#542612] dark:text-white">
+                      {c.user?.name || 'Resident'}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-[#542612]/60">
+                        {c.createdAt
+                          ? new Date(c.createdAt).toLocaleTimeString([], {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })
+                          : 'Just now'}
+                      </span>
+                      {canDelete && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (window.confirm('Delete this comment?')) {
+                              onDeleteComment && onDeleteComment(c._id || c.id);
+                            }
+                          }}
+                          className="opacity-60 hover:opacity-100 text-red-500 hover:text-red-700 transition-all p-0.5 rounded cursor-pointer"
+                          title="Delete comment"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <p className="text-[#542612] dark:text-[#F7F0DF] leading-relaxed">
+                    {c.text}
+                  </p>
                 </div>
-                <p className="text-[#542612] dark:text-[#F7F0DF] leading-relaxed">
-                  {c.text}
-                </p>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

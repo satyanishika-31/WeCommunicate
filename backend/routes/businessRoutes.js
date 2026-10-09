@@ -10,7 +10,8 @@ const {
   pauseBusiness,
   resumeBusiness,
   closeBusiness,
-  deleteBusiness
+  deleteBusiness,
+  addReview
 } = require("../controllers/businessController");
 
 const protect = require("../middleware/authMiddleware");
@@ -75,6 +76,12 @@ router.put(
   "/:id/close",
   protect,
   closeBusiness
+);
+
+router.post(
+  "/:id/reviews",
+  protect,
+  addReview
 );
 
 // Delete business

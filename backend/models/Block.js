@@ -11,7 +11,11 @@ const blockSchema = new mongoose.Schema(
     blockNumber: {
       type: String,
       required: true,
-      unique: true,
+      trim: true
+    },
+
+    community: {
+      type: String,
       trim: true
     },
 

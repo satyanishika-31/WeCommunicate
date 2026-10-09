@@ -59,6 +59,12 @@ const Badge = ({ type = 'GENERAL', text, size = 'sm', className = '' }) => {
           icon: ShieldCheck,
           defaultText: 'Admin',
         };
+      case 'COMMUNITY_HEAD':
+        return {
+          style: 'bg-[#63351E] text-[#F7F0DF] font-bold border border-[#F7F0DF]/30',
+          icon: ShieldCheck,
+          defaultText: 'Community Head',
+        };
       case 'BLOCK_MANAGER':
         return {
           style: 'bg-[#542612] text-white font-semibold',

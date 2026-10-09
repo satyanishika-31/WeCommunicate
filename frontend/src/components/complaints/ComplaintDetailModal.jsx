@@ -12,14 +12,16 @@ const ComplaintDetailModal = ({ isOpen, onClose, complaint, onUpdateStatus }) =>
   const { role } = useAuth();
   const [updating, setUpdating] = useState(false);
   const [currentComplaint, setCurrentComplaint] = useState(complaint);
+  const [assignedHandlerInput, setAssignedHandlerInput] = useState(complaint?.assignedHandlerName || '');
+  const [resolutionNotesInput, setResolutionNotesInput] = useState(complaint?.resolutionNotes || '');
 
   if (!currentComplaint) return null;
 
   const timelineSteps = [
-    { key: 'PENDING', label: 'Complaint Raised', icon: Clock },
-    { key: 'ASSIGNED', label: 'Assigned to Tech', icon: User },
-    { key: 'IN_PROGRESS', label: 'In Progress', icon: Wrench },
-    { key: 'RESOLVED', label: 'Resolved', icon: CheckCircle2 },
+    { key: 'PENDING', label: 'Complaint Raised & Logged', icon: Clock },
+    { key: 'ASSIGNED', label: 'Assigned to Technician', icon: User },
+    { key: 'IN_PROGRESS', label: 'In Progress / Servicing', icon: Wrench },
+    { key: 'RESOLVED', label: 'Issue Resolved & Verified', icon: CheckCircle2 },
   ];
 
   const getStepIndex = (st) => {
@@ -36,7 +38,11 @@ const ComplaintDetailModal = ({ isOpen, onClose, complaint, onUpdateStatus }) =>
 
   const handleStatusChange = async (newStatus) => {
     setUpdating(true);
-    const res = await complaintService.updateStatus(currentComplaint._id, newStatus);
+    const res = await complaintService.updateStatus(currentComplaint._id, {
+      status: newStatus,
+      assignedHandlerName: assignedHandlerInput,
+      resolutionNotes: resolutionNotesInput,
+    });
     if (res.success && res.complaint) {
       setCurrentComplaint(res.complaint);
       if (onUpdateStatus) onUpdateStatus(res.complaint);
@@ -44,27 +50,44 @@ const ComplaintDetailModal = ({ isOpen, onClose, complaint, onUpdateStatus }) =>
     setUpdating(false);
   };
 
+  const routeLabel = {
+    RESIDENT_APP: 'Resident App (Direct)',
+    SECURITY_GUARD: 'Gate Guard Intake Desk',
+    PHONE_ESCALATION: 'Direct Phone Call to Committee',
+    OFFICE_REGISTER: 'Physical Office Register',
+    OTHER: 'General Channel',
+  }[currentComplaint.intakeRoute] || 'Resident App';
+
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Complaint Detail & Timeline"
+      title="Maintenance Ticket & Status Pipeline"
       maxWidth="max-w-2xl"
     >
-      <div className="space-y-6">
+      <div className="space-y-5 font-sans">
         {/* Header Summary */}
-        <div className="flex flex-wrap items-center justify-between gap-3 bg-[#F7F0DF] dark:bg-[#542612]/60 p-4 rounded-2xl border border-[#542612]/15 dark:border-[#F7F0DF]/20">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
+        <div className="bg-[#F7F0DF] dark:bg-[#542612]/60 p-4 rounded-2xl border border-[#542612]/15 dark:border-[#F7F0DF]/20 space-y-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-mono text-xs font-black px-2.5 py-1 rounded-lg bg-[#542612] text-white shadow-xs">
+                {currentComplaint.ticketId || `#CMP-${currentComplaint._id?.slice(-4)}`}
+              </span>
               <Badge type={currentComplaint.category} size="sm" />
               <Badge type={currentComplaint.status} size="sm" />
             </div>
-            <h4 className="font-extrabold text-base text-[#542612] dark:text-white">
-              {currentComplaint.title}
-            </h4>
-            <div className="text-xs text-[#542612]/70 dark:text-[#542612]/60 mt-0.5">
-              Raised by {currentComplaint.raisedBy?.name || 'Resident'} • {currentComplaint.block?.name || 'Block A'} ({currentComplaint.house?.houseNumber || 'Flat 203'})
-            </div>
+
+            <span className="text-[11px] font-bold text-[#542612]/70 dark:text-[#F7F0DF]/80 bg-[#542612]/10 dark:bg-white/10 px-2.5 py-0.5 rounded-full">
+              Route: {routeLabel}
+            </span>
+          </div>
+
+          <h4 className="font-extrabold text-base sm:text-lg text-[#542612] dark:text-white">
+            {currentComplaint.title}
+          </h4>
+
+          <div className="text-xs text-[#542612]/70 dark:text-[#F7F0DF]/70">
+            Unit: <strong>{currentComplaint.flatNumber || currentComplaint.house?.houseNumber || 'Flat 203'}</strong> • Raised by {currentComplaint.raisedBy?.name || 'Resident'}
           </div>
         </div>
 
@@ -140,13 +163,58 @@ const ComplaintDetailModal = ({ isOpen, onClose, complaint, onUpdateStatus }) =>
           </div>
         </div>
 
+        {/* Technician Handler & Resolution Details Display */}
+        {(currentComplaint.assignedHandlerName || currentComplaint.resolutionNotes) && (
+          <div className="p-3.5 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/20 border border-emerald-300/60 dark:border-emerald-800/40 space-y-1.5 text-xs">
+            {currentComplaint.assignedHandlerName && (
+              <div className="font-bold text-emerald-800 dark:text-emerald-300">
+                🛠️ Assigned Technician / Team: <span className="underline">{currentComplaint.assignedHandlerName}</span>
+              </div>
+            )}
+            {currentComplaint.resolutionNotes && (
+              <div className="text-emerald-700 dark:text-emerald-400">
+                ✅ Resolution Log: <em>"{currentComplaint.resolutionNotes}"</em>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Management Controls for Admin & Block Manager */}
         {(role === 'ADMIN' || role === 'BLOCK_MANAGER') && (
           <div className="pt-4 border-t border-[#542612]/15 dark:border-[#F7F0DF]/20 space-y-3">
             <h5 className="text-xs font-bold uppercase tracking-wider text-[#542612]/60 dark:text-[#542612]/70">
-              Update Status (Manager Control)
+              Update Status & Resolution Log (Manager Control)
             </h5>
-            <div className="grid grid-cols-3 gap-2">
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+              <div>
+                <label className="block text-[10px] font-bold uppercase text-[#542612]/70 dark:text-[#F7F0DF]/70 mb-1">
+                  Assigned Staff / Vendor
+                </label>
+                <input
+                  type="text"
+                  value={assignedHandlerInput}
+                  onChange={(e) => setAssignedHandlerInput(e.target.value)}
+                  placeholder="e.g. Ramesh - Lift Tech"
+                  className="w-full px-3 py-2 rounded-xl bg-[#F7F0DF] dark:bg-[#542612] text-xs text-[#542612] dark:text-white border border-[#542612]/20 dark:border-[#F7F0DF]/30 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold uppercase text-[#542612]/70 dark:text-[#F7F0DF]/70 mb-1">
+                  Resolution Notes / Work Performed
+                </label>
+                <input
+                  type="text"
+                  value={resolutionNotesInput}
+                  onChange={(e) => setResolutionNotesInput(e.target.value)}
+                  placeholder="e.g. Sensor replaced, inspected"
+                  className="w-full px-3 py-2 rounded-xl bg-[#F7F0DF] dark:bg-[#542612] text-xs text-[#542612] dark:text-white border border-[#542612]/20 dark:border-[#F7F0DF]/30 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 pt-1">
               <Button
                 variant={currentComplaint.status === 'PENDING' ? 'primary' : 'secondary'}
                 size="sm"
@@ -169,7 +237,7 @@ const ComplaintDetailModal = ({ isOpen, onClose, complaint, onUpdateStatus }) =>
                 loading={updating}
                 onClick={() => handleStatusChange('RESOLVED')}
               >
-                Resolve
+                Resolve & Log
               </Button>
             </div>
           </div>

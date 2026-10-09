@@ -16,7 +16,7 @@ const authorize = require("../middleware/roleMiddleware");
 router.get(
   "/",
   protect,
-  authorize("ADMIN", "BLOCK_MANAGER"),
+  authorize("ADMIN", "COMMUNITY_HEAD", "BLOCK_MANAGER"),
   getUsers
 );
 

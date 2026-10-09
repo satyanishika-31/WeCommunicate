@@ -66,7 +66,14 @@ const Notices = () => {
       ) : (
         <div className="max-w-3xl space-y-5">
           {filteredNotices.map((post) => (
-            <FeedCard key={post._id} post={post} onLikeToggle={fetchNotices} onCommentAdded={fetchNotices} />
+            <FeedCard
+              key={post._id}
+              post={post}
+              onLikeToggle={fetchNotices}
+              onCommentAdded={fetchNotices}
+              onPostDeleted={fetchNotices}
+              onPostPinned={fetchNotices}
+            />
           ))}
         </div>
       )}

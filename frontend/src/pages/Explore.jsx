@@ -23,13 +23,13 @@ const Explore = () => {
 
   const categories = [
     { id: 'ALL', label: 'All Services' },
-    { id: 'BAKING', label: 'Baking 🧁' },
-    { id: 'TUITION', label: 'Tuition 📚' },
-    { id: 'TAILORING', label: 'Tailoring 🧵' },
-    { id: 'BEAUTY', label: 'Beauty 💄' },
-    { id: 'FITNESS', label: 'Fitness 🏋️' },
-    { id: 'ART', label: 'Art 🎨' },
-    { id: 'FOOD', label: 'Food 🍱' },
+    { id: 'BAKING', label: 'Baking' },
+    { id: 'TUITION', label: 'Tuition' },
+    { id: 'TAILORING', label: 'Tailoring' },
+    { id: 'BEAUTY', label: 'Beauty' },
+    { id: 'FITNESS', label: 'Fitness' },
+    { id: 'ART', label: 'Art' },
+    { id: 'FOOD', label: 'Food' },
   ];
 
   const fetchData = async () => {
@@ -86,7 +86,7 @@ const Explore = () => {
 
           <button
             onClick={() => setOpenBusinessOpen(true)}
-            className="px-5 py-2.5 rounded-2xl bg-[#542612] hover:bg-[#542612] text-white font-bold text-sm shadow-md transition-all self-start sm:self-auto"
+            className="px-5 py-2.5 rounded bg-[#542612] hover:bg-[#542612] text-white font-bold text-sm shadow-md transition-all self-start sm:self-auto"
           >
             + Open Your Business
           </button>
@@ -113,7 +113,7 @@ const Explore = () => {
               >
                 <Icon className="w-4 h-4" />
                 <span>{tab.label}</span>
-                <span className="px-2 py-0.5 rounded-full bg-[#F7F0DF] dark:bg-[#542612] text-[10px] text-[#542612] dark:text-[#F7F0DF]">
+                <span className="px-2 py-0.5 rounded bg-[#F7F0DF] dark:bg-[#542612] text-[10px] text-[#542612] dark:text-[#F7F0DF]">
                   {tab.count}
                 </span>
               </button>
@@ -131,7 +131,7 @@ const Explore = () => {
               <button
                 key={c.id}
                 onClick={() => setSelectedCategory(c.id)}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+                className={`px-3.5 py-1.5 rounded text-xs font-semibold whitespace-nowrap transition-all ${
                   selectedCategory === c.id
                     ? 'bg-[#542612] text-white shadow-sm'
                     : 'bg-[#F5EFE1] dark:bg-[#542612] text-[#542612] dark:text-[#F7F0DF] border border-[#542612]/15 dark:border-[#F7F0DF]/20 hover:bg-[#F7F0DF]'
@@ -149,7 +149,7 @@ const Explore = () => {
               action={
                 <button
                   onClick={() => setOpenBusinessOpen(true)}
-                  className="px-4 py-2 rounded-xl bg-[#542612] text-white text-xs font-bold"
+                  className="px-4 py-2 rounded bg-[#542612] text-white text-xs font-bold"
                 >
                   Register Your Business
                 </button>
@@ -181,7 +181,7 @@ const Explore = () => {
                   initial={{ opacity: 0, y: 10 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
-                  className="bg-[#F5EFE1] dark:bg-[#542612] rounded-2xl p-5 border border-[#542612]/15 dark:border-[#F7F0DF]/20 shadow-sm hover:shadow-lg transition-all flex items-center gap-4"
+                  className="bg-[#F5EFE1] dark:bg-[#542612] rounded p-5 border border-[#542612]/15 dark:border-[#F7F0DF]/20 shadow-sm hover:shadow-lg transition-all flex items-center gap-4"
                 >
                   <Avatar src={res.profileImage} name={res.name} size="lg" showStatus />
                   <div className="min-w-0 flex-1">

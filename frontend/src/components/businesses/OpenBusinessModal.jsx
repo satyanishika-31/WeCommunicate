@@ -6,14 +6,14 @@ import { businessService } from '../../api/services';
 import { useAuth } from '../../context/AuthContext';
 
 const categories = [
-  { id: 'BAKING', label: 'Home Baking & Cakes 🧁' },
-  { id: 'TUITION', label: 'Tuition & Coaching 📚' },
-  { id: 'TAILORING', label: 'Tailoring & Boutique 🧵' },
-  { id: 'BEAUTY', label: 'Beauty & Salon 💄' },
-  { id: 'FITNESS', label: 'Fitness & Yoga 🏋️' },
-  { id: 'ART', label: 'Art & Handicrafts 🎨' },
-  { id: 'FOOD', label: 'Home Food & Catering 🍱' },
-  { id: 'OTHER', label: 'Other Services 🏪' },
+  { id: 'BAKING', label: 'Home Baking & Cakes' },
+  { id: 'TUITION', label: 'Tuition & Coaching' },
+  { id: 'TAILORING', label: 'Tailoring & Boutique' },
+  { id: 'BEAUTY', label: 'Beauty & Salon' },
+  { id: 'FITNESS', label: 'Fitness & Yoga' },
+  { id: 'ART', label: 'Art & Handicrafts' },
+  { id: 'FOOD', label: 'Home Food & Catering' },
+  { id: 'OTHER', label: 'Other Services' },
 ];
 
 const OpenBusinessModal = ({ isOpen, onClose, onCreated }) => {

@@ -32,6 +32,7 @@ const CreatePost = () => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [imageUrl, setImageUrl] = useState('');
+  const [isUrgent, setIsUrgent] = useState(false);
   const [loading, setLoading] = useState(false);
 
   // Sample stock photos for quick drag-drop demonstration
@@ -47,9 +48,8 @@ const CreatePost = () => {
     if (!title.trim() || !description.trim()) return;
 
     setLoading(true);
-    // Explicitly send null if no image was selected by the user (no default image!)
     const res = await postService.create(
-      { type, title, description, image: imageUrl.trim() ? imageUrl : null },
+      { type, title, description, image: imageUrl.trim() ? imageUrl : null, isUrgent: type === 'NOTICE' ? isUrgent : false },
       user
     );
     setLoading(false);
@@ -192,6 +192,21 @@ const CreatePost = () => {
                 </div>
               </div>
             </div>
+
+            {type === 'NOTICE' && (
+              <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/40">
+                <input
+                  type="checkbox"
+                  id="urgentNotice"
+                  checked={isUrgent}
+                  onChange={(e) => setIsUrgent(e.target.checked)}
+                  className="w-4 h-4 text-red-600 rounded cursor-pointer"
+                />
+                <label htmlFor="urgentNotice" className="text-xs font-bold text-red-700 dark:text-red-300 cursor-pointer">
+                  Mark as URGENT Broadcast (Triggers delivery confirmation requirement & alert banner)
+                </label>
+              </div>
+            )}
 
             <div className="pt-3 flex justify-end gap-3">
               <Button variant="secondary" onClick={() => navigate('/home')}>

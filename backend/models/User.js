@@ -25,9 +25,19 @@ const userSchema = new mongoose.Schema(
       type: String
     },
 
+    community: {
+      type: String,
+      trim: true
+    },
+
+    houseNumber: {
+      type: String,
+      trim: true
+    },
+
     role: {
       type: String,
-      enum: ["ADMIN", "BLOCK_MANAGER", "USER"],
+      enum: ["ADMIN", "COMMUNITY_HEAD", "BLOCK_MANAGER", "USER"],
       default: "USER"
     },
 

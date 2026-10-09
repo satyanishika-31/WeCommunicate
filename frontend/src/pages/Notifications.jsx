@@ -73,20 +73,20 @@ const Notifications = () => {
                 transition={{ delay: idx * 0.05 }}
                 className={`p-4 sm:p-5 rounded-2xl border transition-all flex items-start gap-4 ${
                   !n.isRead
-                    ? 'bg-[#F7F0DF]/70 dark:bg-[#542612]/40 border-[#F7F0DF] dark:border-[#542612] shadow-sm'
-                    : 'bg-[#F5EFE1] dark:bg-[#542612] border-[#542612]/15 dark:border-[#F7F0DF]/20 opacity-90'
+                    ? 'bg-white dark:bg-zinc-900 border-[#542612]/30 dark:border-amber-700/50 shadow-md ring-1 ring-[#542612]/10'
+                    : 'bg-white/80 dark:bg-zinc-900/80 border-zinc-200 dark:border-zinc-800 shadow-sm opacity-90'
                 }`}
               >
-                <div className="p-2.5 rounded-xl bg-[#F5EFE1] dark:bg-[#542612] shadow-sm flex-shrink-0 mt-0.5">
+                <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-zinc-800 text-[#542612] dark:text-[#EAA627] shadow-sm flex-shrink-0 mt-0.5 border border-amber-100 dark:border-zinc-700">
                   {getNotifIcon(n.type)}
                 </div>
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between mb-1">
-                    <h4 className="font-extrabold text-sm text-[#542612] dark:text-white">
+                    <h4 className="font-extrabold text-sm text-[#542612] dark:text-zinc-100">
                       {n.title}
                     </h4>
-                    <span className="text-[10px] text-[#542612]/60 font-medium">
+                    <span className="text-[11px] text-zinc-400 font-medium">
                       {n.createdAt
                         ? new Date(n.createdAt).toLocaleTimeString([], {
                             hour: '2-digit',
@@ -95,7 +95,7 @@ const Notifications = () => {
                         : 'Just now'}
                     </span>
                   </div>
-                  <p className="text-xs text-[#542612] dark:text-[#F7F0DF] leading-relaxed">
+                  <p className="text-xs text-zinc-600 dark:text-zinc-300 leading-relaxed">
                     {n.message}
                   </p>
                 </div>
