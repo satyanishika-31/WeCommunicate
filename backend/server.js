@@ -14,26 +14,36 @@ const app = express();
 
 // ==================== CORS ====================
 
-const configuredOrigins = (process.env.FRONTEND_URLS || "")
-  .split(",")
-  .map((origin) => origin.trim())
+const configuredOrigins = [
+  process.env.FRONTEND_URLS,
+  process.env.URL_frontend,
+]
+  .filter(Boolean)
+  .flatMap((urls) => urls.split(","))
+  .map((origin) => origin.trim().replace(/\/+$/, ""))
   .filter(Boolean);
 
 const allowedOrigins = [
   "http://localhost:5173",
   "http://127.0.0.1:5173",
   "https://we-communicate.vercel.app",
-  
+  "https://wecommunicate.vercel.app",
   ...configuredOrigins
 ];
 
 app.use(
   cors({
     origin: (origin, callback) => {
+      // Allow requests without origin (Postman, server-to-server)
+      if (!origin) return callback(null, true);
 
-      // Allow requests without origin
-      // Example: Postman or server-to-server requests
-      if (!origin || allowedOrigins.includes(origin)) {
+      const isAllowed =
+        allowedOrigins.includes(origin) ||
+        origin.endsWith(".vercel.app") ||
+        /^http:\/\/localhost:\d+$/.test(origin) ||
+        /^http:\/\/127\.0\.0\.1:\d+$/.test(origin);
+
+      if (isAllowed) {
         callback(null, true);
       } else {
         callback(new Error("Not allowed by CORS"));
