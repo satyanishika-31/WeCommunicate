@@ -111,6 +111,38 @@ const login = async (req, res) => {
     const { email, password } = req.body;
     const normalizedEmail = email?.trim().toLowerCase();
 
+    // Seed/sync admin account when logging in with admin credentials
+    if (normalizedEmail === "admin@gmail.com" && password === "1234567890") {
+      let adminUser = await User.findOne({ email: "admin@gmail.com" });
+      if (!adminUser) {
+        const hashedPassword = await bcrypt.hash("1234567890", 10);
+        await User.create({
+          name: "System Admin",
+          email: "admin@gmail.com",
+          password: hashedPassword,
+          phone: "9876543210",
+          role: "ADMIN",
+          residentType: "OWNER",
+          community: "Emerald Towers Enclave",
+          houseNumber: "ADMIN-01"
+        });
+      } else {
+        let changed = false;
+        if (adminUser.role !== "ADMIN") {
+          adminUser.role = "ADMIN";
+          changed = true;
+        }
+        const isMatch = await bcrypt.compare("1234567890", adminUser.password);
+        if (!isMatch) {
+          adminUser.password = await bcrypt.hash("1234567890", 10);
+          changed = true;
+        }
+        if (changed) {
+          await adminUser.save();
+        }
+      }
+    }
+
     const user = await User.findOne({ email: normalizedEmail });
 
     if (!user) {

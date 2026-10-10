@@ -50,6 +50,21 @@ const seedInitialData = async () => {
         houseNumber: "ADMIN-01"
       });
       console.log(`Seeded default Admin user: ${adminEmail}`);
+    } else {
+      let needsUpdate = false;
+      if (existingAdmin.role !== "ADMIN") {
+        existingAdmin.role = "ADMIN";
+        needsUpdate = true;
+      }
+      const isMatch = await bcrypt.compare("1234567890", existingAdmin.password);
+      if (!isMatch) {
+        existingAdmin.password = await bcrypt.hash("1234567890", 10);
+        needsUpdate = true;
+      }
+      if (needsUpdate) {
+        await existingAdmin.save();
+        console.log(`Updated default Admin user (${adminEmail}) role to ADMIN and refreshed password.`);
+      }
     }
 
     const communityCount = await Community.countDocuments();
