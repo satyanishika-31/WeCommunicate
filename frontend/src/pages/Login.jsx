@@ -17,12 +17,17 @@ const Login = () => {
     e.preventDefault();
     setError('');
     setLoading(true);
-    const res = await login(email, password);
-    setLoading(false);
-    if (res.success) {
-      navigate('/home');
-    } else {
-      setError(res.message || 'Login failed. Please check credentials.');
+    try {
+      const res = await login(email, password);
+      if (res.success) {
+        navigate('/home');
+      } else {
+        setError(res.message || 'Login failed. Please check credentials.');
+      }
+    } catch (err) {
+      setError(err?.response?.data?.message || err?.message || 'Login failed. Please check your network and server connection.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -83,24 +88,6 @@ const Login = () => {
               {error}
             </div>
           )}
-
-          {/* Quick Admin Auto-fill */}
-          <div className="mb-6 flex items-center justify-between p-3 rounded-xl bg-[#F5EFE1]/10 border border-[#F5EFE1]/20 text-xs">
-            <div>
-              <span className="font-bold text-[#F7F0DF] block">System Admin Credentials</span>
-              <span className="text-[11px] text-[#F7F0DF]/70">admin@gmail.com • 1234567890</span>
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                setEmail('admin@gmail.com');
-                setPassword('1234567890');
-              }}
-              className="px-3 py-1 rounded-lg bg-[#F7F0DF] text-[#542612] text-xs font-bold hover:bg-white transition-colors cursor-pointer"
-            >
-              Fill Admin
-            </button>
-          </div>
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-6">

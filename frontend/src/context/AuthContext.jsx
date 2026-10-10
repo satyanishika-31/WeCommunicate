@@ -28,25 +28,43 @@ export const AuthProvider = ({ children }) => {
   };
 
   const login = async (email, password) => {
-    const res = await authService.login({ email, password });
-    if (res.success && res.user) {
-      setUser(res.user);
-      setToken(res.token);
-      localStorage.setItem('token', res.token);
-      localStorage.setItem('wecomm_current_user', JSON.stringify(res.user));
+    try {
+      const res = await authService.login({ email, password });
+      if (res.success && res.user) {
+        setUser(res.user);
+        setToken(res.token);
+        localStorage.setItem('token', res.token);
+        localStorage.setItem('wecomm_current_user', JSON.stringify(res.user));
+      }
+      return res;
+    } catch (err) {
+      const message =
+        err.response?.data?.message ||
+        (err.code === 'ERR_NETWORK' || err.message === 'Network Error'
+          ? 'Cannot connect to backend server. Please verify the backend is running.'
+          : err.message || 'Login failed. Please check credentials.');
+      return { success: false, message };
     }
-    return res;
   };
 
   const register = async (userData) => {
-    const res = await authService.register(userData);
-    if (res.success && res.user) {
-      setUser(res.user);
-      setToken(res.token);
-      localStorage.setItem('token', res.token);
-      localStorage.setItem('wecomm_current_user', JSON.stringify(res.user));
+    try {
+      const res = await authService.register(userData);
+      if (res.success && res.user) {
+        setUser(res.user);
+        setToken(res.token);
+        localStorage.setItem('token', res.token);
+        localStorage.setItem('wecomm_current_user', JSON.stringify(res.user));
+      }
+      return res;
+    } catch (err) {
+      const message =
+        err.response?.data?.message ||
+        (err.code === 'ERR_NETWORK' || err.message === 'Network Error'
+          ? 'Cannot connect to backend server. Please verify the backend is running.'
+          : err.message || 'Registration failed.');
+      return { success: false, message };
     }
-    return res;
   };
 
   const logout = () => {
