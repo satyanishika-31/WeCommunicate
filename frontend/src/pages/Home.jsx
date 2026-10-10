@@ -217,7 +217,7 @@ const Home = () => {
               title: 'Community Information',
               path: '/records',
               icon: Info,
-              bgImage: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&q=80&w=600',
+              bgImage: 'bg_img5.png',
             },
           ].map((item, idx) => {
             const Icon = item.icon;
