@@ -8,7 +8,8 @@ const {
   deleteCommunity,
   setCommunityHead,
   getCommunityDetails,
-  createBlockManager
+  createBlockManager,
+  assignBlockManager
 } = require("../controllers/communityController");
 
 router.get("/", protect, getCommunities);
@@ -21,7 +22,10 @@ router.get("/:id/details", protect, authorize("ADMIN", "COMMUNITY_HEAD"), getCom
 // Assign or create Community Head credentials (ADMIN only)
 router.post("/:id/assign-head", protect, authorize("ADMIN"), setCommunityHead);
 
-// Create credentials for Block Manager (ADMIN or COMMUNITY_HEAD)
+// Assign existing resident as Block Manager (COMMUNITY_HEAD or ADMIN)
+router.post("/:id/assign-block-manager", protect, authorize("COMMUNITY_HEAD", "ADMIN"), assignBlockManager);
+
+// Legacy create credentials for Block Manager
 router.post("/:id/create-block-manager", protect, authorize("ADMIN", "COMMUNITY_HEAD"), createBlockManager);
 
 module.exports = router;

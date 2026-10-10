@@ -68,6 +68,7 @@ export const metaService = {
   addCommunity: (communityData) => data(API.post('/communities', communityData)),
   deleteCommunity: (communityId) => data(API.delete(`/communities/${communityId}`)),
   assignCommunityHead: (communityId, headData) => data(API.post(`/communities/${communityId}/assign-head`, headData)),
+  assignBlockManager: (communityId, payload) => data(API.post(`/communities/${communityId}/assign-block-manager`, payload)),
   createBlockManager: (communityId, managerData) => data(API.post(`/communities/${communityId}/create-block-manager`, managerData)),
   getBlocks: async () => (await data(API.get('/blocks'))).blocks || [],
   getHouses: async () => (await data(API.get('/houses'))).houses || [],

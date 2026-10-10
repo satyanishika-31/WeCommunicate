@@ -68,14 +68,10 @@ const AdminDashboard = () => {
   const [headBlock, setHeadBlock] = useState('');
   const [headFlat, setHeadFlat] = useState('');
 
-  // Create Block Manager Modal (Community Head or Admin)
-  const [showCreateManagerModal, setShowCreateManagerModal] = useState(false);
-  const [mgrName, setMgrName] = useState('');
-  const [mgrEmail, setMgrEmail] = useState('');
-  const [mgrPhone, setMgrPhone] = useState('');
-  const [mgrPassword, setMgrPassword] = useState('');
-  const [mgrBlock, setMgrBlock] = useState('');
-  const [mgrFlat, setMgrFlat] = useState('');
+  // Assign Block Manager State (Community Head only)
+  const [assigningBlock, setAssigningBlock] = useState(null);
+  const [selectedResidentId, setSelectedResidentId] = useState('');
+  const [assigningLoading, setAssigningLoading] = useState(false);
 
   const fetchData = async () => {
     setLoading(true);
@@ -166,32 +162,29 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleCreateBlockManager = async (e) => {
+  const handleAssignResidentAsBlockManager = async (e) => {
     e.preventDefault();
-    if (!selectedCommunityDetail?.community?._id || !mgrBlock) {
-      alert('Please select or specify a block');
+    if (!selectedCommunityDetail?.community?._id || !assigningBlock || !selectedResidentId) {
+      alert('Please choose a resident from the dropdown');
       return;
     }
+    setAssigningLoading(true);
     try {
-      await metaService.createBlockManager(selectedCommunityDetail.community._id, {
-        name: mgrName.trim(),
-        email: mgrEmail.trim().toLowerCase(),
-        phone: mgrPhone.trim(),
-        password: mgrPassword,
-        blockName: mgrBlock.trim(),
-        houseNumber: mgrFlat.trim() || `${mgrBlock}-101`,
+      const res = await metaService.assignBlockManager(selectedCommunityDetail.community._id, {
+        blockName: assigningBlock.name,
+        residentId: selectedResidentId,
       });
-      setShowCreateManagerModal(false);
-      setMgrName('');
-      setMgrEmail('');
-      setMgrPhone('');
-      setMgrPassword('');
-      setMgrBlock('');
-      setMgrFlat('');
+      setAssigningBlock(null);
+      setSelectedResidentId('');
       await handleOpenCommunityDetail(selectedCommunityDetail.community);
       await fetchData();
+      if (res?.message) {
+        alert(res.message);
+      }
     } catch (err) {
-      alert(err.response?.data?.message || err.message || 'Failed to create Block Manager');
+      alert(err.response?.data?.message || err.message || 'Failed to assign Block Manager');
+    } finally {
+      setAssigningLoading(false);
     }
   };
 
@@ -285,11 +278,11 @@ const AdminDashboard = () => {
         <div className="flex items-center justify-between border-b border-[#542612]/20 dark:border-[#F7F0DF]/20 pb-1 flex-wrap gap-2">
           <div className="flex items-center gap-1 sm:gap-2">
             {[
-              { id: 'COMMUNITIES', label: 'Communities Hub', count: communities.length },
-              { id: 'RESIDENTS', label: 'All Residents', count: users.length },
-              { id: 'BLOCKS', label: 'Blocks & Towers', count: blocks.length },
-              { id: 'BUSINESS_APPROVALS', label: 'Business Approvals', count: businesses.length },
-            ].map((tab) => (
+              { id: 'COMMUNITIES', label: 'Communities Hub', count: communities.length, show: true },
+              { id: 'RESIDENTS', label: 'All Residents', count: users.length, show: true },
+              { id: 'BLOCKS', label: 'Blocks & Towers', count: blocks.length, show: isCommunityHead },
+              { id: 'BUSINESS_APPROVALS', label: 'Business Approvals', count: businesses.length, show: isAdmin },
+            ].filter((t) => t.show).map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
@@ -726,69 +719,88 @@ const AdminDashboard = () => {
                 )}
               </div>
 
-              {/* SECTION 2: BLOCKS & BLOCK MANAGERS */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-serif font-bold text-base text-[#542612] dark:text-white">
-                      Blocks & Block Managers
-                    </h4>
-                    <p className="text-xs text-[#542612]/60">
-                      Community Head can create credentials for Block Managers
-                    </p>
-                  </div>
-                  {(isAdmin || isCommunityHead) && (
-                    <button
-                      onClick={() => {
-                        const firstBlock = selectedCommunityDetail.blocks?.[0]?.name || selectedCommunityDetail.community?.blocksList?.[0] || 'Block A';
-                        setMgrBlock(firstBlock);
-                        setShowCreateManagerModal(true);
-                      }}
-                      className="px-3 py-1.5 rounded-xl bg-[#542612] text-white text-xs font-bold hover:bg-[#63351E] flex items-center gap-1.5"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      Create Block Manager
-                    </button>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {(selectedCommunityDetail.blocks?.length > 0 ? selectedCommunityDetail.blocks : (selectedCommunityDetail.community?.blocksList || []).map(b => ({ name: b }))).map((blk, idx) => (
-                    <div
-                      key={blk._id || idx}
-                      className="p-3.5 rounded-2xl bg-white dark:bg-[#542612] border border-[#542612]/15 text-xs space-y-2 shadow-xs"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-sm text-[#542612] dark:text-white">
-                          {blk.name}
-                        </span>
-                        <Badge type="BLOCK_MANAGER" size="sm" />
-                      </div>
-
-                      {blk.manager ? (
-                        <div className="space-y-1 text-[#542612]/80">
-                          <div className="flex items-center gap-1 font-semibold text-[#542612] dark:text-white">
-                            <UserCheck className="w-3.5 h-3.5 text-[#542612]" />
-                            {blk.manager.name}
-                          </div>
-                          <div className="text-[11px] flex items-center gap-1 text-[#542612]/60">
-                            <Phone className="w-3 h-3" />
-                            {blk.manager.phone || 'Phone not set'}
-                          </div>
-                          <div className="text-[11px] flex items-center gap-1 text-[#542612]/60">
-                            <Mail className="w-3 h-3" />
-                            {blk.manager.email}
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="text-[11px] text-[#542612]/60 italic">
-                          No Block Manager assigned yet.
-                        </div>
-                      )}
+              {/* SECTION 2: BLOCKS & BLOCK MANAGERS (COMMUNITY HEAD ONLY) */}
+              {isCommunityHead && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="font-serif font-bold text-base text-[#542612] dark:text-white">
+                        Blocks & Block Managers
+                      </h4>
+                      <p className="text-xs text-[#542612]/60">
+                        Select any resident with their flat number to mark as the Block Manager
+                      </p>
                     </div>
-                  ))}
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {(selectedCommunityDetail.blocks?.length > 0 ? selectedCommunityDetail.blocks : (selectedCommunityDetail.community?.blocksList || []).map(b => ({ name: b }))).map((blk, idx) => (
+                      <div
+                        key={blk._id || idx}
+                        className="p-3.5 rounded-2xl bg-white dark:bg-[#542612] border border-[#542612]/15 text-xs space-y-2 shadow-xs"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-sm text-[#542612] dark:text-white">
+                            {blk.name}
+                          </span>
+                          <Badge type="BLOCK_MANAGER" size="sm" />
+                        </div>
+
+                        {blk.manager ? (
+                          <div className="space-y-1.5 text-[#542612]/80">
+                            <div className="flex items-center gap-1 font-semibold text-[#542612] dark:text-white">
+                              <UserCheck className="w-3.5 h-3.5 text-[#542612]" />
+                              {blk.manager.name}
+                            </div>
+                            <div className="text-[11px] flex items-center gap-1 text-[#542612]/70 font-semibold">
+                              <HomeIcon className="w-3 h-3 text-[#542612]" />
+                              Flat Number: <span className="font-bold">{blk.manager.houseNumber || 'N/A'}</span>
+                            </div>
+                            <div className="text-[11px] flex items-center gap-1 text-[#542612]/60">
+                              <Phone className="w-3 h-3" />
+                              {blk.manager.phone || 'Phone not set'}
+                            </div>
+                            <div className="text-[11px] flex items-center gap-1 text-[#542612]/60">
+                              <Mail className="w-3 h-3" />
+                              {blk.manager.email}
+                            </div>
+                            <div className="pt-2">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setAssigningBlock(blk);
+                                  setSelectedResidentId(blk.manager._id || '');
+                                }}
+                                className="w-full py-1.5 px-3 rounded-xl bg-[#542612]/10 hover:bg-[#542612] text-[#542612] hover:text-white font-bold text-xs transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                              >
+                                <UserCheck className="w-3.5 h-3.5" />
+                                Change Block Manager
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            <div className="text-[11px] text-[#542612]/60 italic">
+                              No Block Manager assigned yet.
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setAssigningBlock(blk);
+                                setSelectedResidentId('');
+                              }}
+                              className="w-full py-1.5 px-3 rounded-xl bg-[#542612] hover:bg-[#63351E] text-white font-bold text-xs transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                            >
+                              <UserCheck className="w-3.5 h-3.5" />
+                              Assign Block Manager
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* SECTION 3: RESIDENTS IN THIS COMMUNITY */}
               <div className="space-y-3">
@@ -968,9 +980,9 @@ const AdminDashboard = () => {
         )}
       </AnimatePresence>
 
-      {/* Modal: Create Block Manager Credentials */}
+      {/* Modal: Assign Block Manager via Resident Dropdown (Community Head) */}
       <AnimatePresence>
-        {showCreateManagerModal && (
+        {assigningBlock && (
           <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
@@ -982,122 +994,61 @@ const AdminDashboard = () => {
                 <div className="flex items-center gap-2">
                   <UserCheck className="w-5 h-5 text-[#542612]" />
                   <h3 className="font-bold text-lg text-[#542612] dark:text-white">
-                    Create Block Manager Credentials
+                    Assign Block Manager — {assigningBlock.name}
                   </h3>
                 </div>
-                <button onClick={() => setShowCreateManagerModal(false)} className="p-1 text-[#542612]/60">
+                <button
+                  type="button"
+                  onClick={() => setAssigningBlock(null)}
+                  className="p-1 text-[#542612]/60 hover:text-[#542612]"
+                >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
-              <form onSubmit={handleCreateBlockManager} className="space-y-3 text-xs font-sans">
+              <form onSubmit={handleAssignResidentAsBlockManager} className="space-y-4 text-xs font-sans">
+                <p className="text-[#542612]/80 leading-relaxed">
+                  Select an existing resident of <strong>{selectedCommunityDetail?.community?.name}</strong>. Their flat number is listed next to their name. Clicking confirm will mark them as the Block Manager for <strong>{assigningBlock.name}</strong>.
+                </p>
+
                 <div>
-                  <label className="block font-bold text-[#542612] uppercase tracking-wider mb-1">
-                    Select Block *
+                  <label className="block font-bold text-[#542612] uppercase tracking-wider mb-1.5">
+                    Select Resident (with Flat Number) *
                   </label>
-                  {selectedCommunityDetail?.community?.blocksList && selectedCommunityDetail.community.blocksList.length > 0 ? (
-                    <select
-                      value={mgrBlock}
-                      onChange={(e) => setMgrBlock(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl bg-[#F7F0DF] border border-[#542612]/20 text-[#542612] focus:outline-none"
-                    >
-                      {selectedCommunityDetail.community.blocksList.map((b) => (
-                        <option key={b} value={b}>{b}</option>
-                      ))}
-                    </select>
-                  ) : (
-                    <input
-                      type="text"
-                      required
-                      value={mgrBlock}
-                      onChange={(e) => setMgrBlock(e.target.value)}
-                      placeholder="e.g. Block A"
-                      className="w-full px-3 py-2 rounded-xl bg-[#F7F0DF] border border-[#542612]/20 text-[#542612] focus:outline-none"
-                    />
+                  <select
+                    required
+                    value={selectedResidentId}
+                    onChange={(e) => setSelectedResidentId(e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-xl bg-[#F7F0DF] border border-[#542612]/30 text-[#542612] font-semibold text-xs focus:outline-none focus:border-[#542612]"
+                  >
+                    <option value="">-- Choose Resident & Flat Number --</option>
+                    {(selectedCommunityDetail?.residents || []).map((res) => (
+                      <option key={res._id} value={res._id}>
+                        {res.name} — Flat: {res.houseNumber || 'N/A'} ({res.email})
+                      </option>
+                    ))}
+                  </select>
+                  {(!selectedCommunityDetail?.residents || selectedCommunityDetail.residents.length === 0) && (
+                    <span className="text-[11px] text-amber-700 mt-1 block">
+                      No residents found in this community yet.
+                    </span>
                   )}
                 </div>
 
-                <div>
-                  <label className="block font-bold text-[#542612] uppercase tracking-wider mb-1">
-                    Manager Name *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={mgrName}
-                    onChange={(e) => setMgrName(e.target.value)}
-                    placeholder="e.g. Anita Roy"
-                    className="w-full px-3 py-2 rounded-xl bg-[#F7F0DF] border border-[#542612]/20 text-[#542612] focus:outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block font-bold text-[#542612] uppercase tracking-wider mb-1">
-                    Manager Email *
-                  </label>
-                  <input
-                    type="email"
-                    required
-                    value={mgrEmail}
-                    onChange={(e) => setMgrEmail(e.target.value)}
-                    placeholder="blockhead@society.com"
-                    className="w-full px-3 py-2 rounded-xl bg-[#F7F0DF] border border-[#542612]/20 text-[#542612] focus:outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block font-bold text-[#542612] uppercase tracking-wider mb-1">
-                    Phone Number
-                  </label>
-                  <input
-                    type="tel"
-                    value={mgrPhone}
-                    onChange={(e) => setMgrPhone(e.target.value)}
-                    placeholder="+91 98765 11223"
-                    className="w-full px-3 py-2 rounded-xl bg-[#F7F0DF] border border-[#542612]/20 text-[#542612] focus:outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block font-bold text-[#542612] uppercase tracking-wider mb-1">
-                    Flat Number
-                  </label>
-                  <input
-                    type="text"
-                    value={mgrFlat}
-                    onChange={(e) => setMgrFlat(e.target.value)}
-                    placeholder="e.g. 201"
-                    className="w-full px-3 py-2 rounded-xl bg-[#F7F0DF] border border-[#542612]/20 text-[#542612] focus:outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block font-bold text-[#542612] uppercase tracking-wider mb-1">
-                    Password *
-                  </label>
-                  <input
-                    type="password"
-                    required
-                    value={mgrPassword}
-                    onChange={(e) => setMgrPassword(e.target.value)}
-                    placeholder="Min 6 characters"
-                    className="w-full px-3 py-2 rounded-xl bg-[#F7F0DF] border border-[#542612]/20 text-[#542612] focus:outline-none"
-                  />
-                </div>
-
-                <div className="pt-2 flex justify-end gap-3">
+                <div className="pt-2 flex justify-end gap-3 border-t border-[#542612]/10">
                   <button
                     type="button"
-                    onClick={() => setShowCreateManagerModal(false)}
-                    className="px-4 py-2 rounded-xl bg-[#F7F0DF] font-bold text-[#542612]"
+                    onClick={() => setAssigningBlock(null)}
+                    className="px-4 py-2 rounded-xl border border-[#542612]/20 text-[#542612] font-bold hover:bg-[#F7F0DF]"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-5 py-2 rounded-xl bg-[#542612] hover:bg-[#63351E] text-white font-bold"
+                    disabled={assigningLoading || !selectedResidentId}
+                    className="px-5 py-2 rounded-xl bg-[#542612] hover:bg-[#63351E] disabled:opacity-50 text-white font-bold cursor-pointer"
                   >
-                    Create Credentials
+                    {assigningLoading ? 'Assigning...' : 'Mark as Block Manager'}
                   </button>
                 </div>
               </form>

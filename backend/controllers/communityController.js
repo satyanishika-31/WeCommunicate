@@ -236,12 +236,69 @@ const createBlockManager = async (req, res) => {
   }
 };
 
+// Assign existing resident as Block Manager (Community Head action)
+const assignBlockManager = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { blockName, residentId } = req.body;
+
+    const community = await Community.findById(id);
+    if (!community) {
+      return res.status(404).json({ success: false, message: "Community not found" });
+    }
+
+    // Role check: Community Head or Admin
+    if (req.user.role !== "COMMUNITY_HEAD" && req.user.role !== "ADMIN") {
+      return res.status(403).json({ success: false, message: "Only Community Head can assign Block Managers" });
+    }
+
+    if (!blockName || !residentId) {
+      return res.status(400).json({ success: false, message: "Block name and resident are required" });
+    }
+
+    const resident = await User.findById(residentId);
+    if (!resident) {
+      return res.status(404).json({ success: false, message: "Resident not found" });
+    }
+
+    // Find or create Block document in this community
+    let blockDoc = await Block.findOne({ community: community.name, name: blockName });
+    if (!blockDoc) {
+      blockDoc = await Block.create({
+        name: blockName,
+        blockNumber: blockName,
+        community: community.name,
+        manager: resident._id
+      });
+    } else {
+      blockDoc.manager = resident._id;
+      await blockDoc.save();
+    }
+
+    // Update resident to BLOCK_MANAGER
+    resident.role = "BLOCK_MANAGER";
+    resident.block = blockDoc._id;
+    resident.community = community.name;
+    await resident.save();
+
+    res.json({
+      success: true,
+      message: `${resident.name} (Flat: ${resident.houseNumber || 'N/A'}) is now the Block Manager for ${blockName}`,
+      block: blockDoc,
+      resident
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
   getCommunities,
   createCommunity,
   deleteCommunity,
   setCommunityHead,
   getCommunityDetails,
-  createBlockManager
+  createBlockManager,
+  assignBlockManager
 };
 
