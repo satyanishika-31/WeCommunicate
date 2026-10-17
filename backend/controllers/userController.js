@@ -1,4 +1,6 @@
 const User = require("../models/User");
+const Business = require("../models/Business");
+const House = require("../models/House");
 
 
 // GET ALL USERS
@@ -84,6 +86,7 @@ const updateUser = async (req, res) => {
       profileImage
     } = req.body;
 
+    const previousPhone = user.phone;
     if (name !== undefined) user.name = name;
     if (phone !== undefined) user.phone = phone;
     if (residentType !== undefined) user.residentType = residentType;
@@ -93,7 +96,25 @@ const updateUser = async (req, res) => {
     if (block !== undefined) user.block = block;
     if (profileImage !== undefined) user.profileImage = profileImage;
 
-    const updatedUser = await user.save();
+    await user.save();
+
+    if (houseNumber !== undefined && user.house) {
+      await House.findByIdAndUpdate(user.house, {
+        $set: { houseNumber }
+      });
+    }
+
+    if (phone !== undefined && phone !== previousPhone) {
+      await Business.updateMany(
+        { owner: user._id },
+        { $set: { contact: phone } }
+      );
+    }
+
+    const updatedUser = await User.findById(user._id)
+      .select("-password")
+      .populate("block")
+      .populate("house");
 
     res.status(200).json({
       success: true,

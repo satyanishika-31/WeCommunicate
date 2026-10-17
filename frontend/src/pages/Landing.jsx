@@ -1,17 +1,14 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   ArrowRight,
-  Sparkles,
-  MessageSquare,
-  Wrench,
   Calendar,
+  MessageSquare,
+  ShieldCheck,
   Store,
   Users,
-  Bell,
-  LogIn,
-  ShieldCheck,
+  Wrench,
 } from 'lucide-react';
 import Logo from '../components/common/Logo';
 
@@ -20,232 +17,211 @@ const Landing = () => {
 
   const features = [
     {
-      title: 'Community Social Feed',
-      desc: 'Discover notices, news, pictures, and updates from neighbors in real time.',
+      title: 'Community updates',
+      description: 'Keep every resident informed with one clear community feed.',
       icon: MessageSquare,
-      color: 'from-[#542612] to-[#542612]',
     },
     {
-      title: 'Smart Complaints Timeline',
-      desc: 'Log maintenance complaints with progressive status tracking from Pending to Resolved.',
+      title: 'Simple maintenance',
+      description: 'Raise, track, and resolve everyday society requests with ease.',
       icon: Wrench,
-      color: 'from-[#542612] to-[#F7F0DF]',
     },
     {
-      title: 'Community Events & RSVP',
-      desc: 'Stay informed about festivals, general body meetings, workshops, and RSVP in one click.',
+      title: 'Events together',
+      description: 'Discover celebrations, meetings, and activities around you.',
       icon: Calendar,
-      color: 'from-[#542612] to-[#542612]',
     },
     {
-      title: 'Resident Businesses Spotlight',
-      desc: 'Support local home bakers, tutors, tailors, and fitness trainers in your society.',
+      title: 'Resident businesses',
+      description: 'Find trusted services and talents within your own community.',
       icon: Store,
-      color: 'from-[#542612] to-[#542612]',
-    },
-    {
-      title: 'Easy Resident Directory',
-      desc: 'Quickly find verified residents by block and house number with privacy controls.',
-      icon: Users,
-      color: 'from-[#542612] to-[#542612]',
-    },
-    {
-      title: 'Instant Notifications',
-      desc: 'Never miss urgent water outages, security alerts, or complaint updates.',
-      icon: Bell,
-      color: 'from-[#F7F0DF] to-[#542612]',
     },
   ];
 
   return (
-    <div className="min-h-screen bg-[#F7F0DF] text-[#542612] font-sans selection:bg-[#542612] selection:text-white overflow-x-hidden">
-      {/* Window Header Dots Bar */}
-      
+    <div className="min-h-screen overflow-x-hidden bg-[#F6EFDE] text-[#542612] selection:bg-[#542612] selection:text-white">
+      <section className="relative min-h-[620px] overflow-hidden bg-[#F6EFDE] sm:min-h-[720px]">
+        <img
+          src="/p1.png"
+          alt="A welcoming residential community"
+          className="absolute inset-0 h-full w-full object-cover object-center"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#4B3322]/75 via-[#31566c]/20 to-transparent" />
 
-      {/* Main Top Header Bar */}
-      <header className="bg-[#542612] text-[#FFFFFF] px-6 sm:px-12 py-5 flex items-center justify-between  relative z-30">
-        <Link
-          to="/"
-          onClick={(e) => {
-            e.preventDefault();
-            navigate('/');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-          }}
-          className="font-serif text-lg sm:text-xl font-bold tracking-wide text-white hover:text-[#F7F0DF] transition-colors cursor-pointer flex items-center gap-2"
-        >
-          <Logo className="w-8 h-8 rounded-xl" />
-          <span>We Communicate</span>
-        </Link>
-
-        <nav className="flex items-center gap-6 sm:gap-10 text-xs sm:text-sm font-sans tracking-wider text-[#F7F0DF]">
-          <a
-            href="#features"
-            onClick={(e) => {
-              e.preventDefault();
-              document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' });
-            }}
-            className="hover:text-white transition-colors cursor-pointer font-medium"
-          >
-            About Us
-          </a>
-          <a
-            href="#features"
-            onClick={(e) => {
-              e.preventDefault();
-              document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' });
-            }}
-            className="hover:text-white transition-colors cursor-pointer font-medium"
-          >
-            Explore
-          </a>
+        <header className="relative z-10 mx-auto flex max-w-7xl items-center justify-between px-6 py-5 sm:px-10 lg:px-14">
+          <Link to="/" className="flex items-center gap-2 text-sm font-bold tracking-tight text-white">
+            <Logo className="h-8 w-8 rounded-lg" />
+            <span>We Communicate</span>
+          </Link>
+          <nav className="hidden items-center gap-8 text-[11px] font-semibold text-white/90 sm:flex">
+            <a href="#about" className="transition-colors hover:text-white">About us</a>
+            <a href="#features" className="transition-colors hover:text-white">Features</a>
+            <a href="#gallery" className="transition-colors hover:text-white">Community</a>
+          </nav>
           <button
             onClick={() => navigate('/login')}
-            className="hover:text-white transition-colors cursor-pointer font-semibold"
+            className="rounded-full bg-[#F7F0DF] px-4 py-2 text-[11px] font-bold text-[#542612] shadow-lg transition-transform hover:-translate-y-0.5"
           >
-            Contact
+            Sign in
           </button>
-        </nav>
-      </header>
+        </header>
 
-      {/* Hero Section with Forest Green & Cream Contrast */}
-      <section className="relative bg-[#542612] overflow-hidden">
-  {/* Background Image */}
-  <img
-    src="OIP.webp"
-    alt="Community background"
-    className="absolute inset-0 w-full h-full object-cover z-0"
-  />
-
-  {/* Background Overlay */}
-  <div className="absolute inset-0 z-0">
-    <div className="absolute inset-0 bg-gradient-to-b from-[#542612]/100 via-[#542612]/0 to-[#542612]/0"></div>
-  </div>
-
-  {/* Hero Title Content */}
-  <div className="relative z-10 max-w-5xl mx-auto text-center px-6 pt-16 sm:pt-24 pb-32 sm:pb-48">
-    <motion.h1
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.8 }}
-      className="font-serif text-3xl sm:text-5xl lg:text-6xl text-[#FFFFFF] font-normal leading-tight tracking-tight max-w-4xl mx-auto drop-shadow-lg"
-    >
-      Residential Community <br />
-      <span className="italic font-serif font-light text-[#F7F0DF]">
-        Living & Harmony
-      </span>
-    </motion.h1>
-  </div>
-</section>
-
-
-      {/* Overlapping Central Card */}
-      <section className="relative z-20 max-w-5xl mx-auto px-6">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 30 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.2 }}
-          className="mx-auto -mt-24 sm:-mt-36 md:-mt-44 w-52 sm:w-68 md:w-80 bg-[#F5EFE1] p-2.5 rounded-2xl shadow-[0_25px_60px_-15px_rgba(27,67,45,0.3)] transition-transform duration-500 hover:scale-[1.02] border border-[#F7F0DF]/40"
-        >
-          <img
-            src="https://www.bing.com/th/id/OIP.XavGX0F9ghDY4B3mJcKnwgHaJ4?w=193&h=257&c=8&rs=1&qlt=90&o=6&dpr=1.3&pid=ImgAns&rm=2"
-            alt="Modern Residential Enclave"
-            className="w-full h-64 sm:h-80 md:h-[400px] object-cover rounded-xl"
-          />
-        </motion.div>
-      </section>
-
-      {/* Light Cream Subtitle & Action Button Section */}
-      <section className="bg-[#F7F0DF] text-center pt-10 sm:pt-14 pb-20 sm:pb-28 px-6">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.4 }}
-          className="max-w-xl mx-auto space-y-8"
-        >
-          <p className="text-xs sm:text-sm md:text-base text-[#542612]/90 font-sans leading-relaxed tracking-wide font-normal max-w-md mx-auto">
-            Discover We Communicate, where community notices, maintenance workflows, and neighborly living thrive together.
-          </p>
-
-          <div className="flex justify-center">
-            <button
-              onClick={() => navigate('/login')}
-              className="inline-flex items-center gap-3 pl-6 pr-1.5 py-1.5 bg-[#542612] hover:bg-[#542612] text-white font-sans text-xs sm:text-sm font-medium rounded-full shadow-md hover:shadow-xl transition-all duration-200 group cursor-pointer"
-            >
-              <span>Explore Portal</span>
-              <span className="w-7 h-7 sm:w-8 sm:h-8 bg-[#F7F0DF] text-[#542612] flex items-center justify-center rounded-full group-hover:translate-x-0.5 transition-transform">
-                <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.5]" />
-              </span>
-            </button>
-          </div>
-        </motion.div>
-      </section>
-
-      {/* Residential Society Platform Features */}
-      <section id="features" className="max-w-6xl mx-auto px-6 py-20 border-t border-[#542612]/15">
-        <div className="text-center max-w-2xl mx-auto mb-16 space-y-3">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#F7F0DF] border border-[#542612]/20 text-[#542612] text-xs font-bold uppercase tracking-wider">
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>We Communicate Society Platform</span>
-          </div>
-          <h2 className="font-serif text-3xl sm:text-4xl font-normal tracking-tight text-[#542612]">
-            Everything your residential community needs.
-          </h2>
-          <p className="text-[#542612]/80 text-xs sm:text-sm leading-relaxed">
-            Unifying digital notices, maintenance timeline tracking, festive event RSVP, and local resident businesses.
-          </p>
-        </div>
-
-        {/* Features Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {features.map((feat, idx) => {
-            const Icon = feat.icon;
-            return (
-              <motion.div
-                key={feat.title}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: idx * 0.08 }}
-                className="bg-[#F5EFE1] p-6 rounded-2xl border border-[#542612]/15 hover:border-[#542612] transition-all duration-300 group hover:-translate-y-1 shadow-xs"
-              >
-                <div className="w-12 h-12 rounded-xl bg-[#542612] flex items-center justify-center text-[#F7F0DF] mb-5 shadow-sm group-hover:scale-110 transition-transform">
-                  <Icon className="w-6 h-6" />
-                </div>
-                <h3 className="font-serif font-bold text-lg text-[#542612] mb-2">{feat.title}</h3>
-                <p className="text-xs text-[#542612]/80 leading-relaxed">{feat.desc}</p>
-              </motion.div>
-            );
-          })}
-        </div>
-
-        {/* Quick Portal Action Bar */}
-        <div className="mt-16 bg-[#542612] text-stone-100 rounded-3xl p-8 sm:p-12 text-center relative overflow-hidden shadow-xl border border-[#F7F0DF]/20">
-          <div className="relative z-10 max-w-2xl mx-auto space-y-6">
-            <h3 className="font-serif text-2xl sm:text-3xl font-normal text-white">
-              Ready to experience your residential community platform?
-            </h3>
-            <p className="text-xs sm:text-sm text-[#F7F0DF]/90 leading-relaxed">
-              Sign in with resident credentials, block manager profile, or administrator panel.
+        <div className="relative z-10 mx-auto flex max-w-7xl flex-col px-6 pb-36 pt-16 sm:px-10 sm:pt-20 lg:px-14">
+          <motion.div
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7 }}
+            className="max-w-xl text-white"
+          >
+            <span className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] backdrop-blur-sm">
+              <Users className="h-3 w-3" />
+              Built for better neighbourhoods
+            </span>
+            <h1 className="max-w-lg font-serif text-4xl leading-[1.05] tracking-tight sm:text-6xl">
+              A stronger community,
+              <span className="block italic text-[#F7F0DF]">together.</span>
+            </h1>
+            <p className="mt-6 max-w-md text-sm leading-relaxed text-white/85 sm:text-base">
+              One warm, simple space for notices, neighbours, maintenance, events, and everything that makes your community feel like home.
             </p>
-            <div className="flex flex-wrap items-center justify-center gap-4 pt-2">
+            <button
+              onClick={() => navigate('/register')}
+              className="mt-8 inline-flex items-center gap-3 rounded-full bg-[#542612] px-5 py-3 text-xs font-bold text-white shadow-xl transition-transform hover:-translate-y-0.5"
+            >
+              Join your community
+              <ArrowRight className="h-4 w-4" />
+            </button>
+          </motion.div>
+        </div>
+      </section>
+
+      <main className="relative z-20 mx-auto -mt-20 max-w-7xl px-4 pb-20 sm:px-8">
+        <section
+          id="about"
+          className="grid overflow-hidden rounded-[2rem] border border-[#542612]/10 bg-[#FBF7F0] shadow-[0_25px_70px_-35px_rgba(84,38,18,0.45)] lg:grid-cols-[1.05fr_0.95fr]"
+        >
+          <div className="p-7 sm:p-12 lg:p-16">
+            <div className="mb-8 flex items-center gap-2 rounded-full border border-[#542612]/10 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-[#542612]/70">
+              <ShieldCheck className="h-3.5 w-3.5" />
+              Trusted resident platform
+            </div>
+            <h2 className="max-w-lg font-serif text-3xl leading-tight sm:text-5xl">
+              Communication without the confusion.
+            </h2>
+            <p className="mt-5 max-w-md text-sm leading-relaxed text-[#542612]/70">
+              Replace scattered messages and missed updates with a shared digital home designed around the way communities actually live.
+            </p>
+            <div className="mt-8 flex flex-wrap gap-3">
               <button
                 onClick={() => navigate('/login')}
-                className="px-6 py-3 rounded-xl bg-[#F7F0DF] text-[#542612] hover:bg-[#F5EFE1] text-xs sm:text-sm font-bold transition-all shadow-md flex items-center gap-2"
+                className="rounded-full bg-[#2C211E] px-5 py-3 text-xs font-bold text-white transition-colors hover:bg-[#542612]"
               >
-                <LogIn className="w-4 h-4" />
-                Sign In to Platform
+                Explore the portal
               </button>
-              <button
-                onClick={() => navigate('/register')}
-                className="px-6 py-3 rounded-xl bg-[#542612] hover:bg-[#542612] text-[#FFFFFF] text-xs sm:text-sm font-bold transition-all border border-[#F7F0DF]/30"
+              <a
+                href="#features"
+                className="inline-flex items-center gap-2 rounded-full border border-[#542612]/20 px-5 py-3 text-xs font-bold"
               >
-                Register Flat
-              </button>
+                See what&apos;s inside
+                <ArrowRight className="h-3.5 w-3.5" />
+              </a>
             </div>
           </div>
-        </div>
-      </section>
+          <div className="relative min-h-[300px] overflow-hidden lg:min-h-full">
+            <img
+              src="/building_facade.png"
+              alt="Community building surrounded by greenery"
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#2C211E]/45 to-transparent" />
+            <div className="absolute bottom-6 left-6 rounded-xl border border-white/30 bg-white/15 px-3 py-2 text-[10px] font-semibold text-white backdrop-blur-md">
+              Made for everyday community life
+            </div>
+          </div>
+        </section>
 
+        <section id="gallery" className="py-20">
+          <div className="relative min-h-[650px] overflow-hidden bg-[#2F2520] px-5 py-8 sm:min-h-[720px] sm:px-10 sm:py-12 lg:px-14">
+            <div className="absolute bottom-9 left-[12%] right-[12%] top-9 bg-[#3D2B1F]" />
+
+            <div className="relative z-10 mx-auto min-h-[570px] max-w-5xl">
+              <div className="absolute left-[4%] top-12 grid w-[52%] grid-cols-2 gap-2 sm:top-16 sm:gap-3">
+                {[
+                  ['/bg_image.png', 'Communication in action'],
+                  ['/card_festive_celebrations.jpg', 'Celebrate together'],
+                  ['/card_green_spaces.jpg', 'Shared green spaces'],
+                  ['/card_serene_atmosphere.jpg', 'A calmer everyday'],
+                  ['/building_facade.png', 'Community homes'],
+                  ['/hero_apartment_garden.jpg', 'A place to belong'],
+                ].map(([src, title]) => (
+                  <motion.div
+                    key={src}
+                    whileHover={{ scale: 1.025 }}
+                    className="group relative h-32 overflow-hidden bg-[#17418E] sm:h-40"
+                  >
+                    <img
+                      src={src}
+                      alt={title}
+                      className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                    />
+                  </motion.div>
+                ))}
+              </div>
+
+              <div className="absolute right-[3%] top-16 w-[38%] text-white sm:top-24">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#EAA627]">
+                  Community photo gallery
+                </p>
+                <p className="mt-5 max-w-xs text-xs leading-relaxed text-white/85 sm:text-sm">
+                  Discover the people, places, and everyday moments that make life in our community feel connected.
+                </p>
+                <p className="mt-4 text-[10px] text-white/60">
+                  Images from the We Communicate community
+                </p>
+                <button
+                  onClick={() => navigate('/login')}
+                  className="mt-5 border border-white/75 px-5 py-2 text-[10px] font-bold uppercase tracking-wider text-white transition-colors hover:bg-white hover:text-[#0D2F78]"
+                >
+                  Explore more
+                </button>
+              </div>
+
+              <div className="absolute bottom-20 right-0 z-20 w-[58%] bg-[#F6EFDE] px-6 py-6 shadow-2xl sm:bottom-12 sm:px-10 sm:py-8">
+                <p className="font-serif text-3xl leading-[0.95] text-[#2F2520] sm:text-5xl">
+                Community
+                <span className="block text-[#3D2B1F]">in colour</span>
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="features" className="rounded-[2rem] bg-[#3D2B1F] p-7 text-[#F7F0DF] sm:p-12">
+          <div className="mb-10 max-w-xl">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#EAA627]">Everything in one place</p>
+            <h2 className="mt-3 font-serif text-3xl sm:text-4xl">Designed to make resident life easier.</h2>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {features.map(({ title, description, icon: Icon }) => (
+              <div key={title} className="rounded-2xl border border-white/15 bg-white/5 p-5">
+                <Icon className="mb-7 h-5 w-5 text-[#EAA627]" />
+                <h3 className="font-serif text-lg">{title}</h3>
+                <p className="mt-2 text-xs leading-relaxed text-[#F7F0DF]/70">{description}</p>
+              </div>
+            ))}
+          </div>
+          <div className="mt-10 flex flex-wrap items-center justify-between gap-4 border-t border-white/15 pt-7">
+            <p className="text-sm text-[#F7F0DF]/75">Ready to make your community feel more connected?</p>
+            <button
+              onClick={() => navigate('/register')}
+              className="inline-flex items-center gap-2 rounded-full bg-[#F7F0DF] px-5 py-3 text-xs font-bold text-[#542612]"
+            >
+              Get started
+              <ArrowRight className="h-4 w-4" />
+            </button>
+          </div>
+        </section>
+      </main>
     </div>
   );
 };

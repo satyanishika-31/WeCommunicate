@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Store, Plus, Trash2 } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Store, Plus, Trash2, Upload, X } from 'lucide-react';
 import Modal from '../common/Modal';
 import Button from '../common/Button';
 import { businessService } from '../../api/services';
@@ -26,7 +26,15 @@ const OpenBusinessModal = ({ isOpen, onClose, onCreated }) => {
   const [services, setServices] = useState([
     { name: 'Custom Cake / Service', price: 500 },
   ]);
+  const [images, setImages] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [submitError, setSubmitError] = useState('');
+
+  useEffect(() => {
+    if (isOpen) {
+      setContact(user?.phone || '');
+    }
+  }, [isOpen, user?.phone]);
 
   const handleAddService = () => {
     setServices([...services, { name: '', price: 0 }]);
@@ -42,22 +50,54 @@ const OpenBusinessModal = ({ isOpen, onClose, onCreated }) => {
     setServices(next);
   };
 
+  const handleImageChange = (event) => {
+    const selectedImages = Array.from(event.target.files || [])
+      .filter((file) => file.type.startsWith('image/'))
+      .slice(0, 5)
+      .map((file) => ({ file, url: URL.createObjectURL(file) }));
+    setImages(selectedImages);
+    event.target.value = '';
+  };
+
+  const removeImage = (index) => {
+    setImages((current) => {
+      URL.revokeObjectURL(current[index].url);
+      return current.filter((_, imageIndex) => imageIndex !== index);
+    });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!businessName.trim() || !description.trim()) return;
 
     setLoading(true);
-    const res = await businessService.create(
-      { businessName, category, description, contact, timings, services },
-      user
-    );
-    setLoading(false);
+    setSubmitError('');
+    const formData = new FormData();
+    formData.append('businessName', businessName);
+    formData.append('category', category);
+    formData.append('description', description);
+    formData.append('contact', contact);
+    formData.append('timings', timings);
+    formData.append('services', JSON.stringify(services.filter((service) => service.name.trim())));
+    images.forEach((image) => formData.append('images', image.file));
 
-    if (res.success && res.business) {
+    try {
+      const res = await businessService.create(formData, user);
+      if (!res.success || !res.business) {
+        setSubmitError(res.message || 'Unable to register your business.');
+        return;
+      }
+
       if (onCreated) onCreated(res.business);
       onClose();
       setBusinessName('');
       setDescription('');
+      images.forEach((image) => URL.revokeObjectURL(image.url));
+      setImages([]);
+    } catch (error) {
+      setSubmitError(error.response?.data?.message || error.message || 'Unable to register your business.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -179,6 +219,49 @@ const OpenBusinessModal = ({ isOpen, onClose, onCreated }) => {
             ))}
           </div>
         </div>
+
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-xs font-bold text-[#542612] dark:text-[#F7F0DF] uppercase tracking-wider">
+              Add Your Work
+            </label>
+            <span className="text-[11px] text-[#542612]/60 dark:text-[#F7F0DF]/60">
+              {images.length}/5 images
+            </span>
+          </div>
+          <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-[#542612]/30 bg-[#F7F0DF] px-4 py-3 text-xs font-bold text-[#542612] transition-colors hover:bg-[#EDE2CB] dark:border-[#F7F0DF]/30 dark:bg-[#542612] dark:text-[#F7F0DF]">
+            <Upload className="h-4 w-4" />
+            Upload photos of your work
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              multiple
+              onChange={handleImageChange}
+              className="hidden"
+            />
+          </label>
+          {images.length > 0 && (
+            <div className="mt-3 grid grid-cols-5 gap-2">
+              {images.map((image, index) => (
+                <div key={`${image.name}-${index}`} className="group relative aspect-square overflow-hidden rounded-lg">
+                  <img src={image.url} alt={`Work sample ${index + 1}`} className="h-full w-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => removeImage(index)}
+                    aria-label={`Remove work sample ${index + 1}`}
+                    className="absolute right-1 top-1 rounded-full bg-[#542612] p-1 text-white opacity-0 transition-opacity group-hover:opacity-100"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {submitError && (
+          <p className="text-xs font-semibold text-red-700">{submitError}</p>
+        )}
 
         <div className="pt-3 flex justify-end gap-3">
           <Button variant="secondary" onClick={onClose}>

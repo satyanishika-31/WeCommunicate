@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Star, ArrowRight, Phone, Clock, MapPin, Tag, Store } from 'lucide-react';
 import Avatar from '../common/Avatar';
 import Badge from '../common/Badge';
+import { getMediaUrl } from '../../utils/media';
 
 const BusinessCard = ({ business, onClick }) => {
 
@@ -23,7 +24,7 @@ const BusinessCard = ({ business, onClick }) => {
         <div className="relative h-36 rounded-2xl overflow-hidden mb-4 bg-[#F7F0DF] dark:bg-[#542612]">
           {business.images && business.images.length > 0 ? (
             <img
-              src={business.images[0]}
+              src={getMediaUrl(business.images[0])}
               alt={business.businessName}
               className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-500"
             />

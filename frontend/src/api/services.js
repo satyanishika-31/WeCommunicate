@@ -33,7 +33,9 @@ export const eventService = {
 
 export const businessService = {
   getAll: async () => (await data(API.get('/businesses'))).businesses || [],
-  create: (businessData) => data(API.post('/businesses', businessData)),
+  create: (businessData) => data(API.post('/businesses', businessData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })),
   updateStatus: (businessId, status) => {
     const endpoint = {
       ACTIVE: 'approve',

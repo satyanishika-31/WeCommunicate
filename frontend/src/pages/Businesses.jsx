@@ -11,6 +11,7 @@ import Badge from '../components/common/Badge';
 import EmptyState from '../components/common/EmptyState';
 import { businessService } from '../api/services';
 import { useAuth } from '../context/AuthContext';
+import { getMediaUrl } from '../utils/media';
 
 const categories = [
   { id: 'ALL', label: 'All Services' },
@@ -22,6 +23,8 @@ const categories = [
   { id: 'ART', label: 'Artists & Crafts' },
   { id: 'FOOD', label: 'Food & Catering' },
 ];
+
+const getBusinessPhone = (business) => business.contact || business.owner?.phone || '';
 
 const Businesses = () => {
   const { user } = useAuth();
@@ -166,13 +169,23 @@ const Businesses = () => {
           title={viewBusiness.businessName}
         >
           <div className="space-y-5">
-            {/* Header Image */}
+            {/* Work Gallery */}
             {viewBusiness.images && viewBusiness.images.length > 0 && (
-              <img
-                src={viewBusiness.images[0]}
-                alt={viewBusiness.businessName}
-                className="w-full h-48 rounded-2xl object-cover"
-              />
+              <div>
+                <h5 className="mb-2 text-xs font-bold uppercase tracking-wider text-[#542612]/60">
+                  Work Gallery
+                </h5>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  {viewBusiness.images.map((image, index) => (
+                    <img
+                      key={`${image}-${index}`}
+                      src={getMediaUrl(image)}
+                      alt={`${viewBusiness.businessName} work sample ${index + 1}`}
+                      className="h-32 w-full rounded-xl object-cover"
+                    />
+                  ))}
+                </div>
+              </div>
             )}
 
             <div className="flex items-center justify-between">
@@ -298,19 +311,30 @@ const Businesses = () => {
               </Button>
             </form>
 
-            <div className="pt-2 flex justify-end gap-3">
-              <Button
-                variant="primary"
-                icon={Phone}
-                className="w-full"
-                onClick={() =>
-                  alert(`Contacting ${viewBusiness.owner?.name}: ${viewBusiness.contact || '+91 98123 45678'}`)
-                }
-              >
-                Call / WhatsApp ({viewBusiness.contact || '+91 98123 45678'})
-              </Button>
+            {getBusinessPhone(viewBusiness) ? (
+              <div className="pt-2">
+                <div
+                  className="flex w-full items-center gap-3 rounded-xl border border-[#EAA627]/50 bg-[#FFF4D6] px-4 py-3 text-[#542612] dark:border-[#EAA627]/60 dark:bg-[#542612] dark:text-[#F7F0DF]"
+                >
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#EAA627] text-[#542612]">
+                    <Phone className="h-4 w-4" />
+                  </span>
+                  <span className="min-w-0 text-left">
+                    <span className="block text-[10px] font-bold uppercase tracking-wider opacity-70">
+                      Contact Number
+                    </span>
+                    <span className="block select-text truncate text-sm font-extrabold">
+                      {getBusinessPhone(viewBusiness)}
+                    </span>
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <p className="pt-2 text-center text-xs font-semibold text-[#542612]/60">
+                This business has not provided a phone number.
+              </p>
+            )}
             </div>
-          </div>
         </Modal>
       )}
 

@@ -13,6 +13,11 @@ const createBusiness = async (req, res) => {
       timings
     } = req.body;
 
+    let parsedServices = services;
+    if (typeof services === "string") {
+      parsedServices = JSON.parse(services);
+    }
+
     const images = req.files
       ? req.files.map(file => `/uploads/${file.filename}`)
       : [];
@@ -22,7 +27,7 @@ const createBusiness = async (req, res) => {
       businessName,
       category,
       description,
-      services,
+      services: parsedServices,
       contact,
       timings,
       images
@@ -47,7 +52,7 @@ const createBusiness = async (req, res) => {
 const getBusinesses = async (req, res) => {
   try {
     const businesses = await Business.find()
-      .populate("owner", "name profileImage block")
+      .populate("owner", "name profileImage block phone")
       .populate("approvedBy", "name")
       .sort({ createdAt: -1 });
 
@@ -70,7 +75,7 @@ const getBusinesses = async (req, res) => {
 const getBusinessById = async (req, res) => {
   try {
     const business = await Business.findById(req.params.id)
-      .populate("owner", "name profileImage block")
+      .populate("owner", "name profileImage block phone")
       .populate("approvedBy", "name");
 
     if (!business) {
@@ -106,7 +111,11 @@ const updateBusiness = async (req, res) => {
       });
     }
 
-    Object.assign(business, req.body);
+    const updateData = { ...req.body };
+    if (typeof updateData.services === "string") {
+      updateData.services = JSON.parse(updateData.services);
+    }
+    Object.assign(business, updateData);
 
     if (req.files) {
       business.images = req.files.map(file => `/uploads/${file.filename}`);
