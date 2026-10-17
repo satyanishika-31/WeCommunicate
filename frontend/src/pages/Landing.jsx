@@ -148,11 +148,11 @@ const Landing = () => {
               <div className="absolute left-[4%] top-12 grid w-[52%] grid-cols-2 gap-2 sm:top-16 sm:gap-3">
                 {[
                   ['/bg_image.png', 'Communication in action'],
-                  ['/card_festive_celebrations.jpg', 'Celebrate together'],
-                  ['/card_green_spaces.jpg', 'Shared green spaces'],
-                  ['/card_serene_atmosphere.jpg', 'A calmer everyday'],
-                  ['/building_facade.png', 'Community homes'],
-                  ['/hero_apartment_garden.jpg', 'A place to belong'],
+                  ['/bg_img2.jpg', 'Celebrate together'],
+                  ['/bg_img3.jpg', 'Shared green spaces'],
+                  ['/bg_img4.png', 'A calmer everyday'],
+                  ['/bg_img5.png', 'Community homes'],
+                  ['/hero_wood.jpg', 'A place to belong'],
                 ].map(([src, title]) => (
                   <motion.div
                     key={src}
