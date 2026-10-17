@@ -88,7 +88,6 @@ router.post(
 router.delete(
   "/:id",
   protect,
-  authorize("ADMIN"),
   deleteBusiness
 );
 

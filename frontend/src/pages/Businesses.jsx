@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Store, Plus, Search, Tag, Phone, Star, MessageSquare, Send } from 'lucide-react';
+import { Store, Plus, Search, Tag, Phone, Star, MessageSquare, Send, Pause, Play, Trash2 } from 'lucide-react';
 import PageContainer from '../components/layout/PageContainer';
 import Header from '../components/layout/Header';
 import BusinessCard from '../components/businesses/BusinessCard';
@@ -39,6 +39,8 @@ const Businesses = () => {
   const [reviewComment, setReviewComment] = useState('');
   const [reviewError, setReviewError] = useState('');
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const [businessActionError, setBusinessActionError] = useState('');
+  const [isUpdatingBusiness, setIsUpdatingBusiness] = useState(false);
 
   const fetchBusinesses = async () => {
     setLoading(true);
@@ -78,6 +80,48 @@ const Businesses = () => {
     );
     setReviewComment('');
     setReviewRating(5);
+  };
+
+  const canManageBusiness = (business) =>
+    business?.owner?._id === user?._id || ['ADMIN', 'BLOCK_MANAGER'].includes(user?.role);
+
+  const handleBusinessStatusChange = async () => {
+    if (!viewBusiness) return;
+    setIsUpdatingBusiness(true);
+    setBusinessActionError('');
+    try {
+      const nextStatus = viewBusiness.status === 'PAUSED' ? 'ACTIVE' : 'PAUSED';
+      const result = await businessService.updateStatus(viewBusiness._id, nextStatus);
+      if (!result.success || !result.business) {
+        throw new Error(result.message || 'Unable to update business status.');
+      }
+      setViewBusiness(result.business);
+      setBusinesses((current) =>
+        current.map((business) => business._id === result.business._id ? result.business : business)
+      );
+    } catch (error) {
+      setBusinessActionError(error.response?.data?.message || error.message || 'Unable to update business status.');
+    } finally {
+      setIsUpdatingBusiness(false);
+    }
+  };
+
+  const handleDeleteBusiness = async () => {
+    if (!viewBusiness || !window.confirm(`Delete "${viewBusiness.businessName}"? This cannot be undone.`)) return;
+    setIsUpdatingBusiness(true);
+    setBusinessActionError('');
+    try {
+      const result = await businessService.delete(viewBusiness._id);
+      if (!result.success) {
+        throw new Error(result.message || 'Unable to delete business.');
+      }
+      setBusinesses((current) => current.filter((business) => business._id !== viewBusiness._id));
+      setViewBusiness(null);
+    } catch (error) {
+      setBusinessActionError(error.response?.data?.message || error.message || 'Unable to delete business.');
+    } finally {
+      setIsUpdatingBusiness(false);
+    }
   };
 
   const filteredBusinesses = businesses.filter((b) => {
@@ -333,6 +377,33 @@ const Businesses = () => {
               <p className="pt-2 text-center text-xs font-semibold text-[#542612]/60">
                 This business has not provided a phone number.
               </p>
+            )}
+            {canManageBusiness(viewBusiness) && (
+              <div className="space-y-2 border-t border-[#542612]/10 pt-4">
+                {businessActionError && (
+                  <p className="text-xs font-semibold text-red-700">{businessActionError}</p>
+                )}
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={handleBusinessStatusChange}
+                    disabled={isUpdatingBusiness}
+                    className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-[#542612]/20 bg-[#F7F0DF] px-4 py-3 text-xs font-extrabold text-[#542612] transition-colors hover:bg-[#EDE2CB] disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {viewBusiness.status === 'PAUSED' ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
+                    {viewBusiness.status === 'PAUSED' ? 'Resume Business' : 'Pause Business'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDeleteBusiness}
+                    disabled={isUpdatingBusiness}
+                    className="flex items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs font-extrabold text-red-700 transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Delete
+                  </button>
+                </div>
+              </div>
             )}
             </div>
         </Modal>

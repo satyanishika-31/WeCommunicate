@@ -1,5 +1,9 @@
 const Business = require("../models/Business");
 
+const canManageBusiness = (business, user) =>
+  business.owner.toString() === user._id.toString() ||
+  ["ADMIN", "BLOCK_MANAGER"].includes(user.role);
+
 
 // CREATE BUSINESS
 const createBusiness = async (req, res) => {
@@ -175,6 +179,14 @@ const approveBusiness = async (req, res) => {
 // PAUSE BUSINESS
 const pauseBusiness = async (req, res) => {
   try {
+    const existingBusiness = await Business.findById(req.params.id);
+    if (!existingBusiness) {
+      return res.status(404).json({ success: false, message: "Business not found" });
+    }
+    if (!canManageBusiness(existingBusiness, req.user)) {
+      return res.status(403).json({ success: false, message: "You are not authorized to manage this business" });
+    }
+
     const business = await Business.findByIdAndUpdate(
       req.params.id,
       { status: "PAUSED" },
@@ -199,6 +211,14 @@ const pauseBusiness = async (req, res) => {
 // RESUME BUSINESS
 const resumeBusiness = async (req, res) => {
   try {
+    const existingBusiness = await Business.findById(req.params.id);
+    if (!existingBusiness) {
+      return res.status(404).json({ success: false, message: "Business not found" });
+    }
+    if (!canManageBusiness(existingBusiness, req.user)) {
+      return res.status(403).json({ success: false, message: "You are not authorized to manage this business" });
+    }
+
     const business = await Business.findByIdAndUpdate(
       req.params.id,
       { status: "ACTIVE" },
@@ -275,6 +295,13 @@ const deleteBusiness = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: "Business not found"
+      });
+    }
+
+    if (!canManageBusiness(business, req.user)) {
+      return res.status(403).json({
+        success: false,
+        message: "You are not authorized to delete this business"
       });
     }
 

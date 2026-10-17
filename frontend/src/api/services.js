@@ -47,6 +47,7 @@ export const businessService = {
     }
     return data(API.put(`/businesses/${businessId}/${endpoint}`));
   },
+  delete: (businessId) => data(API.delete(`/businesses/${businessId}`)),
   addReview: (businessId, reviewData) => data(API.post(`/businesses/${businessId}/reviews`, reviewData)),
 };
 
