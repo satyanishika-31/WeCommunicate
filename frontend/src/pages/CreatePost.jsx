@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -15,7 +15,6 @@ import PageContainer from '../components/layout/PageContainer';
 import Header from '../components/layout/Header';
 import Button from '../components/common/Button';
 import { postService } from '../api/services';
-import { useAuth } from '../context/AuthContext';
 
 const types = [
   { id: 'NOTICE', label: 'Official Notice', icon: Megaphone, desc: 'Water outage, maintenance, society updates' },
@@ -25,15 +24,16 @@ const types = [
 ];
 
 const CreatePost = () => {
-  const { user } = useAuth();
   const navigate = useNavigate();
 
   const [type, setType] = useState('GENERAL');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [imageUrl, setImageUrl] = useState('');
+  const [imageFile, setImageFile] = useState(null);
   const [isUrgent, setIsUrgent] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [submitError, setSubmitError] = useState('');
 
   // Sample stock photos for quick drag-drop demonstration
   const stockImages = [
@@ -43,19 +43,69 @@ const CreatePost = () => {
     'https://images.unsplash.com/photo-1552053831-71594a27632d?auto=format&fit=crop&q=80&w=800',
   ];
 
+  useEffect(() => {
+    return () => {
+      if (imageFile) URL.revokeObjectURL(imageFile.previewUrl);
+    };
+  }, [imageFile]);
+
+  const handleImageFileChange = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      window.alert('Please select an image file.');
+      event.target.value = '';
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      window.alert('Image must be 5 MB or smaller.');
+      event.target.value = '';
+      return;
+    }
+
+    setImageFile(Object.assign(file, { previewUrl: URL.createObjectURL(file) }));
+    setImageUrl('');
+    event.target.value = '';
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!title.trim() || !description.trim()) return;
+    if (!title.trim() || !description.trim()) {
+      setSubmitError('Title and description are required.');
+      return;
+    }
 
     setLoading(true);
-    const res = await postService.create(
-      { type, title, description, image: imageUrl.trim() ? imageUrl : null, isUrgent: type === 'NOTICE' ? isUrgent : false },
-      user
-    );
-    setLoading(false);
+    setSubmitError('');
+    try {
+      const postData = imageFile ? new FormData() : {
+        type,
+        title,
+        description,
+        image: imageUrl.trim() ? imageUrl : null,
+        isUrgent: type === 'NOTICE' ? isUrgent : false,
+      };
 
-    if (res.success) {
-      navigate('/home');
+      if (imageFile) {
+        postData.append('type', type);
+        postData.append('title', title);
+        postData.append('description', description);
+        postData.append('isUrgent', type === 'NOTICE' ? String(isUrgent) : 'false');
+        postData.append('image', imageFile);
+      }
+
+      const res = await postService.create(postData);
+      if (res.success) {
+        navigate('/home');
+      } else {
+        setSubmitError(res.message || 'Failed to publish post.');
+      }
+    } catch (error) {
+      setSubmitError(error.response?.data?.message || error.message || 'Failed to publish post.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -151,10 +201,13 @@ const CreatePost = () => {
                 <label className="block text-xs font-bold text-[#542612] dark:text-[#F7F0DF] uppercase tracking-wider">
                   Photo Attachment (Optional)
                 </label>
-                {imageUrl && (
+                {(imageUrl || imageFile) && (
                   <button
                     type="button"
-                    onClick={() => setImageUrl('')}
+                    onClick={() => {
+                      setImageUrl('');
+                      setImageFile(null);
+                    }}
                     className="text-xs text-[#542612] underline hover:text-[#542612]"
                   >
                     Remove Photo
@@ -164,16 +217,38 @@ const CreatePost = () => {
               <div className="border-2 border-dashed border-[#542612]/20 dark:border-[#F7F0DF]/20 hover:border-[#542612] rounded-2xl p-5 text-center bg-[#F7F0DF]/60 dark:bg-[#542612]/40">
                 <Upload className="w-8 h-8 text-[#542612] dark:text-[#F7F0DF] mx-auto mb-2" />
                 <span className="text-xs font-bold text-[#542612] dark:text-[#F7F0DF] block">
-                  {imageUrl ? 'Photo selected! Click below to change or remove' : 'No photo attached. Select a sample photo below (optional):'}
+                  {imageFile || imageUrl ? 'Photo selected! Click below to change or remove' : 'No photo attached. Select a photo below (optional):'}
                 </span>
+
+                <label className="inline-flex items-center gap-2 mt-3 px-3 py-2 text-xs font-bold rounded-xl bg-[#542612] text-white cursor-pointer">
+                  <Upload className="w-3.5 h-3.5" />
+                  Upload from device
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={handleImageFileChange}
+                    className="sr-only"
+                  />
+                </label>
+
+                {imageFile && (
+                  <img
+                    src={imageFile.previewUrl}
+                    alt="Selected upload preview"
+                    className="w-full max-h-48 object-cover rounded-xl mt-3"
+                  />
+                )}
 
                 {/* Stock Image Presets */}
                 <div className="flex justify-center items-center gap-2 mt-3 flex-wrap">
                   <button
                     type="button"
-                    onClick={() => setImageUrl('')}
+                    onClick={() => {
+                      setImageUrl('');
+                      setImageFile(null);
+                    }}
                     className={`px-3 py-2 text-xs font-bold rounded-xl border transition-all ${
-                      !imageUrl ? 'bg-[#542612] text-white border-[#542612]' : 'bg-[#F5EFE1] text-[#542612] border-[#542612]/25'
+                      !imageUrl && !imageFile ? 'bg-[#542612] text-white border-[#542612]' : 'bg-[#F5EFE1] text-[#542612] border-[#542612]/25'
                     }`}
                   >
                     No Image
@@ -183,9 +258,12 @@ const CreatePost = () => {
                       key={idx}
                       src={img}
                       alt="Preset"
-                      onClick={() => setImageUrl(img)}
+                      onClick={() => {
+                        setImageUrl(img);
+                        setImageFile(null);
+                      }}
                       className={`w-12 h-12 rounded-xl object-cover cursor-pointer border-2 transition-all ${
-                        imageUrl === img ? 'border-[#542612] scale-110' : 'border-transparent opacity-60 hover:opacity-100'
+                        imageUrl === img && !imageFile ? 'border-[#542612] scale-110' : 'border-transparent opacity-60 hover:opacity-100'
                       }`}
                     />
                   ))}
@@ -209,6 +287,11 @@ const CreatePost = () => {
             )}
 
             <div className="pt-3 flex justify-end gap-3">
+              {submitError && (
+                <p className="mr-auto self-center text-xs font-semibold text-red-700 dark:text-red-300">
+                  {submitError}
+                </p>
+              )}
               <Button variant="secondary" onClick={() => navigate('/home')}>
                 Cancel
               </Button>

@@ -7,6 +7,7 @@ import LikeButton from './LikeButton';
 import CommentSection from './CommentSection';
 import { postService } from '../../api/services';
 import { useAuth } from '../../context/AuthContext';
+import { getMediaUrl } from '../../utils/media';
 
 const FeedCard = ({ post, onLikeToggle, onCommentAdded, onPostDeleted, onPostPinned }) => {
   const { user } = useAuth();
@@ -239,7 +240,7 @@ const FeedCard = ({ post, onLikeToggle, onCommentAdded, onPostDeleted, onPostPin
               className="relative overflow-hidden rounded-2xl cursor-pointer group my-3 bg-[#F7F0DF] dark:bg-[#542612] max-h-96 border border-[#542612]/10"
             >
               <img
-                src={post.image}
+                src={getMediaUrl(post.image)}
                 alt={post.title}
                 className="w-full h-full object-cover rounded-2xl group-hover:scale-105 transition-transform duration-500"
               />
@@ -362,7 +363,7 @@ const FeedCard = ({ post, onLikeToggle, onCommentAdded, onPostDeleted, onPostPin
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              src={post.image}
+              src={getMediaUrl(post.image)}
               alt={post.title}
               className="max-w-full max-h-[85vh] rounded-2xl object-contain shadow-2xl"
             />
