@@ -69,7 +69,6 @@ const Notices = () => {
             <FeedCard
               key={post._id}
               post={post}
-              onLikeToggle={fetchNotices}
               onCommentAdded={fetchNotices}
               onPostDeleted={fetchNotices}
               onPostPinned={fetchNotices}

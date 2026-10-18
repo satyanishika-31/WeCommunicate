@@ -402,7 +402,6 @@ const Profile = () => {
                 <FeedCard
                   key={post._id}
                   post={post}
-                  onLikeToggle={fetchData}
                   onPostDeleted={fetchData}
                   onPostPinned={fetchData}
                 />

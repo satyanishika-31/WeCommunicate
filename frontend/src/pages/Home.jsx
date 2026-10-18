@@ -206,7 +206,6 @@ const Home = () => {
                 <FeedCard
                   key={post._id}
                   post={post}
-                  onLikeToggle={fetchData}
                   onCommentAdded={fetchData}
                   onPostDeleted={fetchData}
                   onPostPinned={fetchData}
