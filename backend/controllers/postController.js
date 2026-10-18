@@ -165,6 +165,24 @@ const deletePost = async (req, res) => {
   }
 };
 
+// DELETE ALL POSTS CREATED BY THE CURRENT USER
+const deleteMyPosts = async (req, res) => {
+  try {
+    const result = await Post.deleteMany({ author: req.user._id });
+
+    res.status(200).json({
+      success: true,
+      message: "All your posts were deleted successfully",
+      deletedCount: result.deletedCount
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
 
 // TOGGLE PIN POST
 const togglePinPost = async (req, res) => {
@@ -362,6 +380,7 @@ module.exports = {
   getPostById,
   updatePost,
   deletePost,
+  deleteMyPosts,
   togglePinPost,
   acknowledgePost,
   likePost,

@@ -6,7 +6,10 @@ const House = require("../models/House");
 // GET ALL USERS
 const getUsers = async (req, res) => {
   try {
-    const users = await User.find()
+    const query = req.user.role === "COMMUNITY_HEAD"
+      ? { community: req.user.community }
+      : {};
+    const users = await User.find(query)
       .select("-password")
       .populate("block")
       .populate("house");

@@ -10,14 +10,18 @@ const EventCard = ({ event, onRSVPToggle }) => {
   const [attendees, setAttendees] = useState(event.attendees || []);
   const [loading, setLoading] = useState(false);
 
-  const isAttending = user ? attendees.includes(user._id) : false;
+  const isAttending = user
+    ? attendees.some((attendee) => (attendee?._id || attendee) === user._id)
+    : false;
 
   const handleRSVP = async () => {
     if (!user) return;
     setLoading(true);
     await eventService.toggleRSVP(event._id, user._id);
     setAttendees((prev) =>
-      isAttending ? prev.filter((id) => id !== user._id) : [...prev, user._id]
+      isAttending
+        ? prev.filter((attendee) => (attendee?._id || attendee) !== user._id)
+        : [...prev, user._id]
     );
     setLoading(false);
     if (onRSVPToggle) onRSVPToggle(event._id, !isAttending);

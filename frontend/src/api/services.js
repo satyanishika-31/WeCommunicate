@@ -18,6 +18,7 @@ export const postService = {
   getAll: async () => (await data(API.get('/posts'))).posts || [],
   create: (postData) => data(API.post('/posts', postData)),
   delete: (postId) => data(API.delete(`/posts/${postId}`)),
+  deleteMine: () => data(API.delete('/posts/mine')),
   togglePin: (postId) => data(API.patch(`/posts/${postId}/pin`)),
   acknowledge: (postId) => data(API.post(`/posts/${postId}/acknowledge`)),
   toggleLike: (postId) => data(API.post(`/posts/${postId}/like`)),

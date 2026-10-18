@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -20,6 +20,7 @@ import RaiseComplaintModal from '../components/complaints/RaiseComplaintModal';
 import OpenBusinessModal from '../components/businesses/OpenBusinessModal';
 import { postService, eventService, businessService } from '../api/services';
 import { useAuth } from '../context/AuthContext';
+import useEventPolling from '../hooks/useEventPolling';
 
 const Home = () => {
   const { user } = useAuth();
@@ -52,6 +53,12 @@ const Home = () => {
   useEffect(() => {
     fetchData();
   }, []);
+
+  const handleEventsUpdated = useCallback((data) => {
+    setEvents(data || []);
+  }, []);
+
+  useEventPolling(handleEventsUpdated);
 
   const handleSearch = (q) => {
     setSearchQuery(q);

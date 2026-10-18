@@ -7,6 +7,7 @@ const {
   getPostById,
   updatePost,
   deletePost,
+  deleteMyPosts,
   togglePinPost,
   acknowledgePost,
   likePost,
@@ -38,6 +39,13 @@ router.post(
   protect,
   upload.single("image"),
   createPost
+);
+
+// Delete all posts created by the current user
+router.delete(
+  "/mine",
+  protect,
+  deleteMyPosts
 );
 
 // Update post

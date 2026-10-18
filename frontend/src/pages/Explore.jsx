@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Search, Users, Store, Calendar, MapPin, Phone, Mail, Filter } from 'lucide-react';
 import PageContainer from '../components/layout/PageContainer';
@@ -10,6 +10,7 @@ import Badge from '../components/common/Badge';
 import EmptyState from '../components/common/EmptyState';
 import OpenBusinessModal from '../components/businesses/OpenBusinessModal';
 import { metaService, businessService, eventService } from '../api/services';
+import useEventPolling from '../hooks/useEventPolling';
 
 const Explore = () => {
   const [activeTab, setActiveTab] = useState('BUSINESSES'); // BUSINESSES | RESIDENTS | EVENTS
@@ -48,6 +49,12 @@ const Explore = () => {
   useEffect(() => {
     fetchData();
   }, []);
+
+  const handleEventsUpdated = useCallback((data) => {
+    setEvents(data || []);
+  }, []);
+
+  useEventPolling(handleEventsUpdated);
 
   const filteredBusinesses = businesses.filter((b) => {
     const matchesCat = selectedCategory === 'ALL' || b.category === selectedCategory;

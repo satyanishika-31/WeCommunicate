@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useCallback, useRef, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import {
@@ -16,6 +16,7 @@ import {
   Building,
   CheckCircle2,
   Edit3,
+  Trash2,
 } from 'lucide-react';
 import PageContainer from '../components/layout/PageContainer';
 import Header from '../components/layout/Header';
@@ -30,6 +31,7 @@ import EventCard from '../components/events/EventCard';
 import EmptyState from '../components/common/EmptyState';
 import { useAuth } from '../context/AuthContext';
 import { postService, complaintService, businessService, eventService, metaService } from '../api/services';
+import useEventPolling from '../hooks/useEventPolling';
 
 const Profile = () => {
   const { user, role, residentType, updateProfile } = useAuth();
@@ -41,6 +43,7 @@ const Profile = () => {
   const [userBusinesses, setUserBusinesses] = useState([]);
   const [userEvents, setUserEvents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isDeletingAllPosts, setIsDeletingAllPosts] = useState(false);
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editSaving, setEditSaving] = useState(false);
@@ -149,6 +152,35 @@ const Profile = () => {
   useEffect(() => {
     fetchData();
   }, [user]);
+
+  const handleEventsUpdated = useCallback((events) => {
+    setUserEvents((events || []).filter((event) =>
+      event.attendees?.some((attendee) =>
+        (attendee?._id || attendee) === user?._id
+      )
+    ));
+  }, [user?._id]);
+
+  useEventPolling(handleEventsUpdated);
+
+  const handleDeleteAllPosts = async () => {
+    if (userPosts.length === 0 || isDeletingAllPosts) return;
+
+    const confirmed = window.confirm(
+      `Are you sure you want to delete all ${userPosts.length} of your posts? This action cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    setIsDeletingAllPosts(true);
+    try {
+      await postService.deleteMine();
+      await fetchData();
+    } catch (err) {
+      window.alert(err?.response?.data?.message || err.message || 'Failed to delete your posts.');
+    } finally {
+      setIsDeletingAllPosts(false);
+    }
+  };
 
   return (
     <PageContainer>
@@ -349,6 +381,20 @@ const Profile = () => {
         {/* TAB CONTENTS */}
         {activeTab === 'POSTS' && (
           <div className="space-y-4">
+            {userPosts.length > 0 && (
+              <div className="flex justify-end">
+                <Button
+                  type="button"
+                  variant="danger"
+                  size="sm"
+                  icon={Trash2}
+                  loading={isDeletingAllPosts}
+                  onClick={handleDeleteAllPosts}
+                >
+                  Delete All My Posts
+                </Button>
+              </div>
+            )}
             {userPosts.length === 0 ? (
               <EmptyState title="No posts created yet" description="Share updates with your neighbors on the home feed!" />
             ) : (

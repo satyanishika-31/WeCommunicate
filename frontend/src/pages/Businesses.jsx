@@ -85,6 +85,8 @@ const Businesses = () => {
   const canManageBusiness = (business) =>
     business?.owner?._id === user?._id || ['ADMIN', 'BLOCK_MANAGER'].includes(user?.role);
 
+  const isBusinessOwner = (business) => business?.owner?._id === user?._id;
+
   const handleBusinessStatusChange = async () => {
     if (!viewBusiness) return;
     setIsUpdatingBusiness(true);
@@ -393,15 +395,17 @@ const Businesses = () => {
                     {viewBusiness.status === 'PAUSED' ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
                     {viewBusiness.status === 'PAUSED' ? 'Resume Business' : 'Pause Business'}
                   </button>
-                  <button
-                    type="button"
-                    onClick={handleDeleteBusiness}
-                    disabled={isUpdatingBusiness}
-                    className="flex items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs font-extrabold text-red-700 transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    Delete
-                  </button>
+                  {isBusinessOwner(viewBusiness) && (
+                    <button
+                      type="button"
+                      onClick={handleDeleteBusiness}
+                      disabled={isUpdatingBusiness}
+                      className="flex items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs font-extrabold text-red-700 transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Delete
+                    </button>
+                  )}
                 </div>
               </div>
             )}

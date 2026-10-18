@@ -47,7 +47,10 @@ const createBlock = async (req, res) => {
 // GET ALL BLOCKS
 const getBlocks = async (req, res) => {
   try {
-    const blocks = await Block.find()
+    const query = req.user.role === "COMMUNITY_HEAD"
+      ? { community: req.user.community }
+      : {};
+    const blocks = await Block.find(query)
       .populate("manager", "name email");
 
     res.status(200).json({

@@ -5,7 +5,10 @@ const bcrypt = require("bcryptjs");
 
 const getCommunities = async (req, res) => {
   try {
-    const communities = await Community.find()
+    const query = req.user?.role === "COMMUNITY_HEAD"
+      ? { communityHead: req.user._id }
+      : {};
+    const communities = await Community.find(query)
       .populate("communityHead", "name email phone houseNumber block")
       .sort({ createdAt: -1 });
     res.json({ success: true, communities });
@@ -146,6 +149,12 @@ const getCommunityDetails = async (req, res) => {
     if (!community) {
       return res.status(404).json({ success: false, message: "Community not found" });
     }
+    if (
+      req.user.role === "COMMUNITY_HEAD" &&
+      (!community.communityHead || community.communityHead._id.toString() !== req.user._id.toString())
+    ) {
+      return res.status(403).json({ success: false, message: "You are not authorized to view this community" });
+    }
 
     // Find blocks associated with this community
     const blocks = await Block.find({ community: community.name }).populate("manager", "name email phone houseNumber");
@@ -251,6 +260,12 @@ const assignBlockManager = async (req, res) => {
     if (req.user.role !== "COMMUNITY_HEAD" && req.user.role !== "ADMIN") {
       return res.status(403).json({ success: false, message: "Only Community Head can assign Block Managers" });
     }
+    if (
+      req.user.role === "COMMUNITY_HEAD" &&
+      (!community.communityHead || community.communityHead.toString() !== req.user._id.toString())
+    ) {
+      return res.status(403).json({ success: false, message: "You are not authorized to manage this community" });
+    }
 
     if (!blockName || !residentId) {
       return res.status(400).json({ success: false, message: "Block name and resident are required" });
@@ -259,6 +274,12 @@ const assignBlockManager = async (req, res) => {
     const resident = await User.findById(residentId);
     if (!resident) {
       return res.status(404).json({ success: false, message: "Resident not found" });
+    }
+    if (resident.community !== community.name || resident.residentType !== "OWNER") {
+      return res.status(400).json({
+        success: false,
+        message: "Only an owner from this community can become a Block Manager"
+      });
     }
 
     // Find or create Block document in this community
@@ -271,9 +292,20 @@ const assignBlockManager = async (req, res) => {
         manager: resident._id
       });
     } else {
+      if (blockDoc.manager && blockDoc.manager.toString() !== resident._id.toString()) {
+        await User.findByIdAndUpdate(blockDoc.manager, {
+          role: "USER",
+          $unset: { block: 1 }
+        });
+      }
       blockDoc.manager = resident._id;
       await blockDoc.save();
     }
+
+    await Block.updateMany(
+      { manager: resident._id, _id: { $ne: blockDoc._id } },
+      { $unset: { manager: 1 } }
+    );
 
     // Update resident to BLOCK_MANAGER
     resident.role = "BLOCK_MANAGER";
@@ -301,4 +333,3 @@ module.exports = {
   createBlockManager,
   assignBlockManager
 };
-

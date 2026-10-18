@@ -4,6 +4,9 @@ const canManageBusiness = (business, user) =>
   business.owner.toString() === user._id.toString() ||
   ["ADMIN", "BLOCK_MANAGER"].includes(user.role);
 
+const isBusinessOwner = (business, user) =>
+  business.owner.toString() === user._id.toString();
+
 
 // CREATE BUSINESS
 const createBusiness = async (req, res) => {
@@ -298,10 +301,10 @@ const deleteBusiness = async (req, res) => {
       });
     }
 
-    if (!canManageBusiness(business, req.user)) {
+    if (!isBusinessOwner(business, req.user)) {
       return res.status(403).json({
         success: false,
-        message: "You are not authorized to delete this business"
+        message: "Only the business owner can delete this business"
       });
     }
 

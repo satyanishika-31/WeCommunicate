@@ -219,10 +219,16 @@ const Register = () => {
                 <Building2 className="w-3.5 h-3.5 text-[#F7F0DF]" />
               </label>
               <select
+                required
                 value={community}
                 onChange={(e) => handleCommunityChange(e.target.value)}
                 className="w-full px-4 py-3 rounded-xl bg-[#F5EFE1] text-xs sm:text-sm text-[#542612] border border-[#542612]/20 focus:outline-none focus:border-[#542612] transition-all font-sans"
               >
+                {rawCommunities.length === 0 && (
+                  <option value="" disabled className="bg-[#F5EFE1] text-[#542612]">
+                    No communities available
+                  </option>
+                )}
                 {rawCommunities.map((comm) => (
                   <option key={comm._id || comm.name} value={comm.name} className="bg-[#F5EFE1] text-[#542612]">
                     {comm.name} ({comm.totalBlocks || comm.blocksList?.length || 0} Blocks)

@@ -23,7 +23,8 @@ const createEvent = async (req, res) => {
       date,
       time,
       venue,
-      block
+      community: req.user.community || null,
+      block: block || req.user.block || null
     });
 
     res.status(201).json({
@@ -44,7 +45,17 @@ const createEvent = async (req, res) => {
 // GET EVENTS
 const getEvents = async (req, res) => {
   try {
-    const events = await Event.find()
+    const communityFilter = req.user.community
+      ? {
+          $or: [
+            { community: req.user.community },
+            { community: { $exists: false } },
+            { community: null }
+          ]
+        }
+      : {};
+
+    const events = await Event.find(communityFilter)
       .populate("createdBy", "name")
       .populate("block", "name blockNumber")
       .populate("attendees", "name")

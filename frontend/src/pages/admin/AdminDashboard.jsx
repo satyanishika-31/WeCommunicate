@@ -96,6 +96,12 @@ const AdminDashboard = () => {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    if (isCommunityHead) {
+      setActiveTab('BLOCKS');
+    }
+  }, [isCommunityHead]);
+
   const handleOpenCommunityDetail = async (community) => {
     setCommunityDetailsLoading(true);
     setSelectedCommunityDetail({ community });
@@ -207,6 +213,40 @@ const AdminDashboard = () => {
     fetchData();
   };
 
+  const getBlockResidents = (block) => {
+    const blockId = block?._id?.toString();
+    const blockName = block?.name?.toLowerCase();
+    return users.filter((resident) => {
+      const residentBlockId = (resident.block?._id || resident.block)?.toString();
+      if (blockId && residentBlockId === blockId) return true;
+      return Boolean(
+        blockName &&
+        resident.houseNumber?.toLowerCase().startsWith(`${blockName}-`)
+      );
+    });
+  };
+
+  const handleSwapBlockManager = async (block, resident) => {
+    const community = communities.find((item) => item.name === block.community);
+    if (!community) {
+      alert('The community for this block could not be found.');
+      return;
+    }
+
+    setAssigningLoading(true);
+    try {
+      await metaService.assignBlockManager(community._id, {
+        blockName: block.name,
+        residentId: resident._id,
+      });
+      await fetchData();
+    } catch (err) {
+      alert(err.response?.data?.message || err.message || 'Failed to assign Block Manager');
+    } finally {
+      setAssigningLoading(false);
+    }
+  };
+
   return (
     <PageContainer>
       <Header />
@@ -298,13 +338,15 @@ const AdminDashboard = () => {
           </div>
 
           {activeTab === 'COMMUNITIES' && (
-            <button
-              onClick={() => setShowAddCommModal(true)}
-              className="px-4 py-2 rounded-xl bg-[#542612] hover:bg-[#542612] text-white text-xs font-bold transition-all flex items-center gap-2 shadow-sm"
-            >
-              <Plus className="w-4 h-4" />
-              Add New Community
-            </button>
+            isAdmin && (
+              <button
+                onClick={() => setShowAddCommModal(true)}
+                className="px-4 py-2 rounded-xl bg-[#542612] hover:bg-[#542612] text-white text-xs font-bold transition-all flex items-center gap-2 shadow-sm"
+              >
+                <Plus className="w-4 h-4" />
+                Add New Community
+              </button>
+            )
           )}
         </div>
 
@@ -409,6 +451,7 @@ const AdminDashboard = () => {
                   <th className="py-3 px-4">Resident Name</th>
                   <th className="py-3 px-4">Email</th>
                   <th className="py-3 px-4">Community</th>
+                  <th className="py-3 px-4">Block</th>
                   <th className="py-3 px-4">Flat Unit</th>
                   <th className="py-3 px-4">Role</th>
                   <th className="py-3 px-4 text-right">Actions</th>
@@ -424,6 +467,9 @@ const AdminDashboard = () => {
                     <td className="py-3.5 px-4 text-[#542612]/70">{u.email}</td>
                     <td className="py-3.5 px-4 font-semibold text-[#542612] dark:text-[#F7F0DF]">
                       {u.community || 'Emerald Towers Enclave'}
+                    </td>
+                    <td className="py-3.5 px-4 font-semibold text-[#542612]">
+                      {u.block?.name || '—'}
                     </td>
                     <td className="py-3.5 px-4 font-semibold text-[#542612]">
                       {u.house?.houseNumber || 'A-101'}
@@ -464,8 +510,48 @@ const AdminDashboard = () => {
                   </span>
                 </div>
                 <p className="text-xs text-[#542612]/70">
-                  Assigned Manager: <strong>Vikramaditya Das (A-201)</strong>
+                  Assigned Manager:{' '}
+                  <strong>{bl.manager ? `${bl.manager.name} (${bl.manager.houseNumber || 'Flat not set'})` : 'Not assigned'}</strong>
                 </p>
+                <div className="border-t border-[#542612]/10 pt-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-[#542612]/70">
+                      Owners in this block
+                    </h4>
+                    <span className="text-[10px] text-[#542612]/60">
+                      {getBlockResidents(bl).filter((resident) => resident.residentType === 'OWNER').length} owners
+                    </span>
+                  </div>
+                  {getBlockResidents(bl).filter((resident) => resident.residentType === 'OWNER').map((resident) => {
+                    const isManager = bl.manager?._id === resident._id;
+                    return (
+                      <div
+                        key={resident._id}
+                        className="flex items-center justify-between gap-2 rounded-xl bg-white/70 dark:bg-[#542612]/60 p-2.5 text-xs"
+                      >
+                        <div className="min-w-0">
+                          <p className="font-bold text-[#542612] dark:text-white truncate">{resident.name}</p>
+                          <p className="text-[10px] text-[#542612]/60">
+                            Flat {resident.houseNumber || 'N/A'}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          disabled={assigningLoading || isManager}
+                          onClick={() => handleSwapBlockManager(bl, resident)}
+                          className="shrink-0 rounded-lg bg-[#542612]/10 px-2.5 py-1.5 text-[10px] font-bold text-[#542612] hover:bg-[#542612] hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {isManager ? 'Manager' : bl.manager ? 'Swap Manager' : 'Make Manager'}
+                        </button>
+                      </div>
+                    );
+                  })}
+                  {getBlockResidents(bl).filter((resident) => resident.residentType === 'OWNER').length === 0 && (
+                    <p className="text-[11px] text-[#542612]/60 italic">
+                      No owners found in this block.
+                    </p>
+                  )}
+                </div>
               </div>
             ))}
           </div>
@@ -1022,7 +1108,9 @@ const AdminDashboard = () => {
                     className="w-full px-3 py-2.5 rounded-xl bg-[#F7F0DF] border border-[#542612]/30 text-[#542612] font-semibold text-xs focus:outline-none focus:border-[#542612]"
                   >
                     <option value="">-- Choose Resident & Flat Number --</option>
-                    {(selectedCommunityDetail?.residents || []).map((res) => (
+                    {getBlockResidents(assigningBlock)
+                      .filter((resident) => resident.residentType === 'OWNER')
+                      .map((res) => (
                       <option key={res._id} value={res._id}>
                         {res.name} — Flat: {res.houseNumber || 'N/A'} ({res.email})
                       </option>

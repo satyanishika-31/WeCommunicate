@@ -12,7 +12,8 @@ const {
   assignBlockManager
 } = require("../controllers/communityController");
 
-router.get("/", protect, getCommunities);
+// Public so new residents can choose their community during registration.
+router.get("/", getCommunities);
 router.post("/", protect, authorize("ADMIN"), createCommunity);
 router.delete("/:id", protect, authorize("ADMIN"), deleteCommunity);
 
@@ -29,4 +30,3 @@ router.post("/:id/assign-block-manager", protect, authorize("COMMUNITY_HEAD", "A
 router.post("/:id/create-block-manager", protect, authorize("ADMIN", "COMMUNITY_HEAD"), createBlockManager);
 
 module.exports = router;
-

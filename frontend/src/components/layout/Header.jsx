@@ -5,7 +5,6 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
 import Avatar from '../common/Avatar';
-import Logo from '../common/Logo';
 
 const Header = ({ onSearch }) => {
   const { user } = useAuth();
@@ -17,20 +16,11 @@ const Header = ({ onSearch }) => {
 
   const isHomePage = location.pathname === '/home';
 
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Good morning';
-    if (hour < 17) return 'Good afternoon';
-    return 'Good evening';
-  };
-
   const handleSearchChange = (e) => {
     const query = e.target.value;
     setSearchQuery(query);
     if (onSearch) onSearch(query);
   };
-
-  const firstName = user?.name ? user.name.split(' ')[0] : 'Resident';
 
   // On non-home pages, render a sleek, compact top navigation bar without the large "Good morning" banner card
   if (!isHomePage) {
@@ -165,13 +155,7 @@ const Header = ({ onSearch }) => {
       <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
         {/* Greeting section */}
         <div>
-          <div className="flex items-center gap-3">
-            <Logo className="w-9 h-9 rounded-xl" />
-            <h1 className="font-serif text-2xl lg:text-3xl font-bold text-[#542612] dark:text-[#542612] tracking-tight">
-              {getGreeting()}, {firstName} 👋
-            </h1>
-          </div>
-          <p className="text-[#542612]/80 dark:text-[#F7F0DF]/90 font-medium text-sm lg:text-base mt-1 font-sans">
+          <p className="text-[#542612]/80 dark:text-[#F7F0DF]/90 font-medium text-sm lg:text-base font-sans">
             What's happening in your community today?
           </p>
         </div>

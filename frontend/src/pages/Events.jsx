@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { Calendar, Plus } from 'lucide-react';
 import PageContainer from '../components/layout/PageContainer';
 import Header from '../components/layout/Header';
@@ -9,6 +9,7 @@ import Modal from '../components/common/Modal';
 import Button from '../components/common/Button';
 import { eventService } from '../api/services';
 import { useAuth } from '../context/AuthContext';
+import useEventPolling from '../hooks/useEventPolling';
 
 const Events = () => {
   const { user, role } = useAuth();
@@ -32,17 +33,28 @@ const Events = () => {
     setLoading(false);
   };
 
+  const handleEventsUpdated = useCallback((data) => {
+    setEvents(data || []);
+  }, []);
+
   useEffect(() => {
     fetchEvents();
   }, []);
+  useEventPolling(handleEventsUpdated);
 
   const handleCreateEvent = async (e) => {
     e.preventDefault();
     if (!title.trim()) return;
     setCreating(true);
     const res = await eventService.create(
-      { title, description, date, time, venue },
-      user
+      {
+        title,
+        description,
+        date,
+        time,
+        venue,
+        block: user?.block?._id || user?.block || undefined,
+      }
     );
     setCreating(false);
     if (res.success) {

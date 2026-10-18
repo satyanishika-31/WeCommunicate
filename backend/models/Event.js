@@ -35,6 +35,11 @@ const eventSchema = new mongoose.Schema(
       required: true
     },
 
+    community: {
+      type: String,
+      trim: true
+    },
+
     block: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Block"
