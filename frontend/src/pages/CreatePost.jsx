@@ -83,22 +83,31 @@ const CreatePost = () => {
     setLoading(true);
     setSubmitError('');
     try {
-      const postData = imageFile ? new FormData() : {
-        type,
-        title,
-        description,
-        image: imageUrl.trim() ? imageUrl : null,
-        isUrgent: type === 'NOTICE' ? isUrgent : false,
-      };
-
       if (imageFile) {
+        const postData = new FormData();
         postData.append('type', type);
         postData.append('title', title);
         postData.append('description', description);
         postData.append('isUrgent', type === 'NOTICE' ? String(isUrgent) : 'false');
         postData.append('image', imageFile);
+        const res = await postService.create(postData);
+        if (res.success) {
+          navigate('/home');
+        } else {
+          setSubmitError(res.message || 'Failed to publish post.');
+        }
+        return;
       }
 
+      const postData = {
+        type,
+        title,
+        description,
+        isUrgent: type === 'NOTICE' ? isUrgent : false,
+        ...(typeof imageUrl === 'string' && imageUrl.trim()
+          ? { image: imageUrl.trim() }
+          : {}),
+      };
       const res = await postService.create(postData);
       if (res.success) {
         navigate('/home');

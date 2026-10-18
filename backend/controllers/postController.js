@@ -13,7 +13,9 @@ const createPost = async (req, res) => {
       isUrgent
     } = req.body;
 
-    const image = req.file ? `/uploads/${req.file.filename}` : (imageUrl || null);
+    const image = req.file
+      ? `/uploads/${req.file.filename}`
+      : (typeof imageUrl === "string" && imageUrl.trim() ? imageUrl.trim() : null);
 
     const post = await Post.create({
       author: req.user._id,
