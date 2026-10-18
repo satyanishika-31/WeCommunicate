@@ -21,11 +21,7 @@ const upload = multer({
   },
 
   fileFilter: (req, file, cb) => {
-    if (
-      file.mimetype === "image/jpeg" ||
-      file.mimetype === "image/png" ||
-      file.mimetype === "image/webp"
-    ) {
+    if (file.mimetype && file.mimetype.startsWith("image/")) {
       cb(null, true);
     } else {
       cb(new Error("Only JPG, PNG and WEBP images are allowed"));

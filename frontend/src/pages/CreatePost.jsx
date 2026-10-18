@@ -31,6 +31,7 @@ const CreatePost = () => {
   const [description, setDescription] = useState('');
   const [imageUrl, setImageUrl] = useState('');
   const [imageFile, setImageFile] = useState(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState('');
   const [isUrgent, setIsUrgent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [submitError, setSubmitError] = useState('');
@@ -45,15 +46,15 @@ const CreatePost = () => {
 
   useEffect(() => {
     return () => {
-      if (imageFile) URL.revokeObjectURL(imageFile.previewUrl);
+      if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl);
     };
-  }, [imageFile]);
+  }, [imagePreviewUrl]);
 
   const handleImageFileChange = (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    if (!file.type.startsWith('image/')) {
+    if (!file.type || !file.type.startsWith('image/')) {
       window.alert('Please select an image file.');
       event.target.value = '';
       return;
@@ -65,7 +66,9 @@ const CreatePost = () => {
       return;
     }
 
-    setImageFile(Object.assign(file, { previewUrl: URL.createObjectURL(file) }));
+    if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl);
+    setImageFile(file);
+    setImagePreviewUrl(URL.createObjectURL(file));
     setImageUrl('');
     event.target.value = '';
   };
@@ -207,6 +210,7 @@ const CreatePost = () => {
                     onClick={() => {
                       setImageUrl('');
                       setImageFile(null);
+                      setImagePreviewUrl('');
                     }}
                     className="text-xs text-[#542612] underline hover:text-[#542612]"
                   >
@@ -225,7 +229,7 @@ const CreatePost = () => {
                   Upload from device
                   <input
                     type="file"
-                    accept="image/jpeg,image/png,image/webp"
+                    accept="image/*"
                     onChange={handleImageFileChange}
                     className="sr-only"
                   />
@@ -233,7 +237,7 @@ const CreatePost = () => {
 
                 {imageFile && (
                   <img
-                    src={imageFile.previewUrl}
+                    src={imagePreviewUrl}
                     alt="Selected upload preview"
                     className="w-full max-h-48 object-cover rounded-xl mt-3"
                   />
@@ -246,6 +250,7 @@ const CreatePost = () => {
                     onClick={() => {
                       setImageUrl('');
                       setImageFile(null);
+                      setImagePreviewUrl('');
                     }}
                     className={`px-3 py-2 text-xs font-bold rounded-xl border transition-all ${
                       !imageUrl && !imageFile ? 'bg-[#542612] text-white border-[#542612]' : 'bg-[#F5EFE1] text-[#542612] border-[#542612]/25'
@@ -261,6 +266,7 @@ const CreatePost = () => {
                       onClick={() => {
                         setImageUrl(img);
                         setImageFile(null);
+                        setImagePreviewUrl('');
                       }}
                       className={`w-12 h-12 rounded-xl object-cover cursor-pointer border-2 transition-all ${
                         imageUrl === img && !imageFile ? 'border-[#542612] scale-110' : 'border-transparent opacity-60 hover:opacity-100'
