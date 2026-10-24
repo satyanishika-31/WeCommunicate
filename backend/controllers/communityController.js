@@ -1,7 +1,21 @@
 const Community = require("../models/Community");
+const CommunityNameLock = require("../models/CommunityNameLock");
 const User = require("../models/User");
 const Block = require("../models/Block");
+const House = require("../models/House");
 const bcrypt = require("bcryptjs");
+
+const normalizeCommunityCode = (value) => (
+  typeof value === "string" ? value.trim().toUpperCase() : ""
+);
+
+const generateCommunityCode = async () => {
+  let code;
+  do {
+    code = `COMM-${Math.floor(100 + Math.random() * 900)}`;
+  } while (await Community.exists({ code }));
+  return code;
+};
 
 const getCommunities = async (req, res) => {
   try {
@@ -11,15 +25,67 @@ const getCommunities = async (req, res) => {
     const communities = await Community.find(query)
       .populate("communityHead", "name email phone houseNumber block")
       .sort({ createdAt: -1 });
-    res.json({ success: true, communities });
+    const seenNames = new Set();
+    const uniqueCommunities = communities.filter((community) => {
+      const key = community.name.trim().toLocaleLowerCase();
+      if (seenNames.has(key)) return false;
+      seenNames.add(key);
+      return true;
+    });
+    res.json({ success: true, communities: uniqueCommunities });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
 const createCommunity = async (req, res) => {
+  let nameLock;
   try {
-    const { name, location, code, totalBlocks, totalFlats, managerName, blocksList, flatsList } = req.body;
+    const { name, location, totalBlocks, totalFlats, managerName, blocksList, flatsList } = req.body;
+    const normalizedName = typeof name === "string" ? name.trim() : "";
+    const normalizedCode = normalizeCommunityCode(req.body.code) || await generateCommunityCode();
+
+    if (!normalizedName) {
+      return res.status(400).json({ success: false, message: "Community name is required." });
+    }
+
+    const normalizedNameKey = normalizedName.toLocaleLowerCase();
+    const existingName = await Community.findOne({ name: normalizedName })
+      .collation({ locale: "en", strength: 2 })
+      .select("_id");
+    if (existingName) {
+      return res.status(409).json({
+        success: false,
+        message: `A community named "${normalizedName}" already exists.`
+      });
+    }
+
+    try {
+      nameLock = await CommunityNameLock.create({
+        normalizedName: normalizedNameKey,
+        community: new Community()._id
+      });
+    } catch (error) {
+      if (nameLock && error.code !== 11000) {
+        await CommunityNameLock.deleteOne({ _id: nameLock._id }).catch(() => {});
+      }
+      if (error.code === 11000) {
+        return res.status(409).json({
+          success: false,
+          message: `A community named "${normalizedName}" is already being created or exists.`
+        });
+      }
+      throw error;
+    }
+
+    const existingCode = await Community.exists({ code: normalizedCode });
+    if (existingCode) {
+      await CommunityNameLock.deleteOne({ _id: nameLock._id });
+      return res.status(409).json({
+        success: false,
+        message: `Community code ${normalizedCode} already exists. Please choose another code.`
+      });
+    }
     
     // Parse blocksList if passed as array or comma separated string
     let parsedBlocks = [];
@@ -37,15 +103,17 @@ const createCommunity = async (req, res) => {
     }
 
     const community = await Community.create({
-      name,
+      name: normalizedName,
       location,
-      code,
+      code: normalizedCode,
       totalBlocks: parsedBlocks.length > 0 ? parsedBlocks.length : (Number(totalBlocks) || 0),
       totalFlats: parsedFlats.length > 0 ? parsedFlats.length : (Number(totalFlats) || 0),
       managerName,
       blocksList: parsedBlocks,
       flatsList: parsedFlats
     });
+    nameLock.community = community._id;
+    await nameLock.save();
 
     // Automatically create Block documents for each block in parsedBlocks if provided
     for (const bName of parsedBlocks) {
@@ -63,9 +131,14 @@ const createCommunity = async (req, res) => {
 
     res.status(201).json({ success: true, community });
   } catch (error) {
+    const duplicateField = error.code === 11000
+      ? Object.keys(error.keyPattern || {})[0]
+      : null;
     res.status(error.code === 11000 ? 409 : 400).json({
       success: false,
-      message: error.code === 11000 ? "Community code already exists." : error.message
+      message: duplicateField === "code"
+        ? "Community code already exists. Please choose another code."
+        : (error.message || "Community could not be created.")
     });
   }
 };
@@ -74,6 +147,7 @@ const deleteCommunity = async (req, res) => {
   try {
     const community = await Community.findByIdAndDelete(req.params.id);
     if (!community) return res.status(404).json({ success: false, message: "Community not found" });
+    await CommunityNameLock.deleteOne({ community: community._id });
     res.json({ success: true, message: "Community deleted successfully" });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -157,7 +231,34 @@ const getCommunityDetails = async (req, res) => {
     }
 
     // Find blocks associated with this community
-    const blocks = await Block.find({ community: community.name }).populate("manager", "name email phone houseNumber");
+    const blocks = await Block.find({ community: community.name })
+      .populate("manager", "name email phone houseNumber");
+    const houses = await House.find({ block: { $in: blocks.map((block) => block._id) } })
+      .populate("residents", "name email phone houseNumber residentType role isApproved")
+      .populate("owner", "name email phone houseNumber");
+    const housesByBlock = new Map();
+    houses.forEach((house) => {
+      const blockId = house.block.toString();
+      if (!housesByBlock.has(blockId)) housesByBlock.set(blockId, []);
+      housesByBlock.get(blockId).push(house);
+    });
+    const blockStatistics = blocks.map((block) => {
+      const blockHouses = housesByBlock.get(block._id.toString()) || [];
+      const occupiedHouses = blockHouses.filter(
+        (house) => house.status !== "VACANT" || house.residents.length > 0 || house.owner
+      );
+      return {
+        ...block.toObject(),
+        houses: blockHouses,
+        totalHouses: blockHouses.length || block.totalHouses || 0,
+        occupiedHouses: occupiedHouses.length,
+        availableHouses: Math.max((blockHouses.length || block.totalHouses || 0) - occupiedHouses.length, 0),
+        residentCount: blockHouses.reduce(
+          (count, house) => count + house.residents.length + (house.owner ? 1 : 0),
+          0
+        )
+      };
+    });
 
     // Find residents associated with this community
     const residents = await User.find({ community: community.name })
@@ -169,9 +270,14 @@ const getCommunityDetails = async (req, res) => {
       success: true,
       community,
       communityHead: community.communityHead,
-      blocks,
+      blocks: blockStatistics,
       residents,
-      totalResidents: residents.length
+      houses,
+      totalResidents: residents.length,
+      totalBlocks: blockStatistics.length,
+      totalHouses: blockStatistics.reduce((total, block) => total + block.totalHouses, 0),
+      occupiedHouses: blockStatistics.reduce((total, block) => total + block.occupiedHouses, 0),
+      availableHouses: blockStatistics.reduce((total, block) => total + block.availableHouses, 0)
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -275,15 +381,18 @@ const assignBlockManager = async (req, res) => {
     if (!resident) {
       return res.status(404).json({ success: false, message: "Resident not found" });
     }
-    if (resident.community !== community.name || resident.residentType !== "OWNER") {
+    if (resident.community !== community.name) {
       return res.status(400).json({
         success: false,
-        message: "Only an owner from this community can become a Block Manager"
+        message: "Only a resident from this community can become a Block Manager"
       });
     }
 
     // Find or create Block document in this community
     let blockDoc = await Block.findOne({ community: community.name, name: blockName });
+    if (!blockDoc && !community.blocksList.includes(blockName)) {
+      return res.status(400).json({ success: false, message: "The selected block does not belong to this community" });
+    }
     if (!blockDoc) {
       blockDoc = await Block.create({
         name: blockName,
@@ -299,23 +408,32 @@ const assignBlockManager = async (req, res) => {
         });
       }
       blockDoc.manager = resident._id;
+      blockDoc.managerAssignedDate = new Date();
       await blockDoc.save();
     }
 
+    await User.updateMany(
+      { _id: { $ne: resident._id }, role: "BLOCK_MANAGER", block: blockDoc._id },
+      { role: "USER", $unset: { block: 1, assignedDate: 1 } }
+    );
+
     await Block.updateMany(
       { manager: resident._id, _id: { $ne: blockDoc._id } },
-      { $unset: { manager: 1 } }
+      { $unset: { manager: 1, managerAssignedDate: 1 } }
     );
 
     // Update resident to BLOCK_MANAGER
     resident.role = "BLOCK_MANAGER";
+    resident.isApproved = true;
     resident.block = blockDoc._id;
     resident.community = community.name;
+    resident.assignedDate = blockDoc.managerAssignedDate;
+    resident.flatNumber = resident.flatNumber || resident.houseNumber;
     await resident.save();
 
     res.json({
       success: true,
-      message: `${resident.name} (Flat: ${resident.houseNumber || 'N/A'}) is now the Block Manager for ${blockName}`,
+      message: `${resident.name} (Flat: ${resident.flatNumber || resident.houseNumber || 'N/A'}) is now the Block Manager for ${blockName}`,
       block: blockDoc,
       resident
     });

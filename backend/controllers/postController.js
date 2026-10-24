@@ -1,4 +1,6 @@
 const Post = require("../models/Post");
+const User = require("../models/User");
+const createNotifications = require("../utils/createNotification");
 
 
 // CREATE POST
@@ -12,6 +14,9 @@ const createPost = async (req, res) => {
       block,
       isUrgent
     } = req.body;
+    if (type === "NOTICE" && !["ADMIN", "COMMUNITY_HEAD", "BLOCK_MANAGER"].includes(req.user.role)) {
+      return res.status(403).json({ success: false, message: "Only community managers can publish notices" });
+    }
 
     const image = req.file
       ? `/uploads/${req.file.filename}`
@@ -26,6 +31,28 @@ const createPost = async (req, res) => {
       block,
       isUrgent: isUrgent === true || isUrgent === 'true'
     });
+    if (post.type === "NOTICE") {
+      const recipients = await User.find(
+        block ? { block } : { community: req.user.community },
+        "_id"
+      );
+      await createNotifications({
+        recipients: recipients.map((user) => user._id),
+        type: "NEW_NOTICE",
+        title: "New community notice",
+        message: post.title,
+        relatedId: post._id
+      });
+    } else if (post.type === "EVENT") {
+      const recipients = await User.find({ community: req.user.community }, "_id");
+      await createNotifications({
+        recipients: recipients.map((user) => user._id),
+        type: "EVENT",
+        title: "New community event",
+        message: post.title,
+        relatedId: post._id
+      });
+    }
 
     res.status(201).json({
       success: true,
@@ -39,23 +66,75 @@ const createPost = async (req, res) => {
       message: error.message
     });
   }
+  if (post.author.toString() !== req.user._id.toString() &&
+    !["ADMIN", "COMMUNITY_HEAD", "BLOCK_MANAGER"].includes(req.user.role)) {
+    return res.status(403).json({ success: false, message: "You are not authorized to update this post" });
+  }
+};
+
+const getAcknowledgements = async (req, res) => {
+  if (!["ADMIN", "COMMUNITY_HEAD", "BLOCK_MANAGER"].includes(req.user.role)) {
+    return res.status(403).json({ success: false, message: "Manager access required" });
+  }
+  const post = await Post.findById(req.params.id);
+  if (!post) return res.status(404).json({ success: false, message: "Post not found" });
+  const filter = post.block ? { block: post.block } : { community: req.user.community };
+  const recipients = await User.find(filter, "name houseNumber");
+  const acknowledgedIds = new Set(post.acknowledgements.map((item) => item.user.toString()));
+  const pending = recipients.filter((user) => !acknowledgedIds.has(user._id.toString()));
+  res.json({
+    success: true,
+    totalRecipients: recipients.length,
+    acknowledgedCount: recipients.length - pending.length,
+    notAcknowledged: pending
+  });
+};
+
+const remindNonAcknowledgers = async (req, res) => {
+  const post = await Post.findById(req.params.id);
+  if (!post) return res.status(404).json({ success: false, message: "Post not found" });
+  const filter = post.block ? { block: post.block } : { community: req.user.community };
+  const recipients = await User.find(filter, "_id");
+  const acknowledgedIds = new Set(post.acknowledgements.map((item) => item.user.toString()));
+  await createNotifications({
+    recipients: recipients.filter((user) => !acknowledgedIds.has(user._id.toString())).map((user) => user._id),
+    type: "NEW_NOTICE",
+    title: "Notice acknowledgement reminder",
+    message: post.title,
+    relatedId: post._id
+  });
+  res.json({ success: true, message: "Reminders sent" });
 };
 
 
 // GET FEED
 const getPosts = async (req, res) => {
   try {
-    const posts = await Post.find()
+    let filter = {};
+    if (req.query.type) filter.type = req.query.type;
+    if (req.query.block) {
+      filter.$or = [{ block: req.query.block }, { block: null }, { block: { $exists: false } }];
+    }
+
+    const posts = await Post.find(filter)
       .populate("author", "name profileImage")
       .populate("block", "name blockNumber")
       .populate("comments.user", "name profileImage")
-      .populate("acknowledgements.user", "name houseNumber email")
       .sort({ isPinned: -1, createdAt: -1 });
+    const postsWithPrivateAcknowledgements = posts.map((post) => {
+      const json = post.toObject();
+      json.acknowledgementsCount = post.acknowledgements.length;
+      json.acknowledgedByMe = post.acknowledgements.some(
+        (ack) => ack.user.toString() === req.user._id.toString()
+      );
+      delete json.acknowledgements;
+      return json;
+    });
 
     res.status(200).json({
       success: true,
       count: posts.length,
-      posts
+      posts: postsWithPrivateAcknowledgements
     });
 
   } catch (error) {
@@ -81,10 +160,18 @@ const getPostById = async (req, res) => {
         message: "Post not found"
       });
     }
+    if (post.author.toString() !== req.user._id.toString() &&
+      !["ADMIN", "COMMUNITY_HEAD", "BLOCK_MANAGER"].includes(req.user.role)) {
+      return res.status(403).json({ success: false, message: "You are not authorized to update this post" });
+    }
 
+    const json = post.toObject();
+    json.acknowledgementsCount = post.acknowledgements.length;
+    json.acknowledgedByMe = post.acknowledgements.some((ack) => ack.user.toString() === req.user._id.toString());
+    delete json.acknowledgements;
     res.status(200).json({
       success: true,
-      post
+      post: json
     });
 
   } catch (error) {
@@ -145,7 +232,8 @@ const deletePost = async (req, res) => {
       });
     }
 
-    if (post.author.toString() !== req.user._id.toString() && req.user.role !== "ADMIN") {
+    if (post.author.toString() !== req.user._id.toString() &&
+      !["ADMIN", "COMMUNITY_HEAD", "BLOCK_MANAGER"].includes(req.user.role)) {
       return res.status(403).json({
         success: false,
         message: "You are not authorized to delete this post"
@@ -198,7 +286,8 @@ const togglePinPost = async (req, res) => {
       });
     }
 
-    if (post.author.toString() !== req.user._id.toString() && req.user.role !== "ADMIN") {
+    const isManager = ["ADMIN", "COMMUNITY_HEAD", "BLOCK_MANAGER"].includes(req.user.role);
+    if (!isManager && post.author.toString() !== req.user._id.toString()) {
       return res.status(403).json({
         success: false,
         message: "You are not authorized to pin or unpin this post"
@@ -255,14 +344,11 @@ const acknowledgePost = async (req, res) => {
     }
 
     await post.save();
-    await post.populate("acknowledgements.user", "name houseNumber email");
-
     res.status(200).json({
       success: true,
       message: alreadyAcked ? "Notice acknowledgement removed" : "Notice confirmed and acknowledged",
       acknowledged: !alreadyAcked,
-      acknowledgementsCount: post.acknowledgements.length,
-      acknowledgements: post.acknowledgements
+      acknowledgementsCount: post.acknowledgements.length
     });
 
   } catch (error) {
@@ -363,7 +449,6 @@ const deleteComment = async (req, res) => {
     }
     const isCommentAuthor = comment.user.toString() === req.user._id.toString();
     const isPostAuthor = post.author.toString() === req.user._id.toString();
-    const isAdmin = req.user.role === 'ADMIN';
     if (!isCommentAuthor && !isPostAuthor && !isAdmin) {
       return res.status(403).json({ success: false, message: 'You are not authorized to delete this comment' });
     }
@@ -385,6 +470,8 @@ module.exports = {
   deleteMyPosts,
   togglePinPost,
   acknowledgePost,
+  getAcknowledgements,
+  remindNonAcknowledgers,
   likePost,
   commentPost,
   deleteComment

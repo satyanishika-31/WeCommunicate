@@ -26,13 +26,13 @@ const CATEGORIES = [
   { id: 'ALL', label: 'All Documents', icon: BookOpen },
   { id: 'BYLAWS', label: 'Bylaws & Rules', icon: ShieldCheck },
   { id: 'AGM_MINUTES', label: 'AGM Minutes', icon: Calendar },
-  { id: 'HANDOVER_LOG', label: 'Committee Handover', icon: Briefcase },
+  { id: 'COMMITTEE_HANDOVER', label: 'Committee Handover', icon: Briefcase },
   { id: 'FINANCIAL_AUDIT', label: 'Audits & Finance', icon: FileText },
 ];
 
 const Records = () => {
   const { user } = useAuth();
-  const isAdminOrManager = user?.role === 'ADMIN' || user?.role === 'BLOCK_MANAGER';
+  const isAdminOrManager = ['ADMIN', 'COMMUNITY_HEAD', 'BLOCK_MANAGER'].includes(user?.role);
 
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -45,8 +45,8 @@ const Records = () => {
   const [formData, setFormData] = useState({
     title: '',
     category: 'BYLAWS',
-    documentRef: '',
-    fileUrl: '',
+    referenceCode: '',
+    documentUrl: '',
     fileSize: '1.2 MB',
     fileType: 'PDF',
     description: '',
@@ -71,7 +71,7 @@ const Records = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.title || !formData.fileUrl) {
+    if (!formData.title || !formData.documentUrl) {
       setError('Title and File URL are required');
       return;
     }
@@ -83,8 +83,8 @@ const Records = () => {
       setFormData({
         title: '',
         category: 'BYLAWS',
-        documentRef: '',
-        fileUrl: '',
+        referenceCode: '',
+        documentUrl: '',
         fileSize: '1.2 MB',
         fileType: 'PDF',
         description: '',
@@ -112,7 +112,7 @@ const Records = () => {
     const q = searchQuery.toLowerCase();
     return (
       rec.title.toLowerCase().includes(q) ||
-      rec.documentRef?.toLowerCase().includes(q) ||
+      rec.referenceCode?.toLowerCase().includes(q) ||
       rec.description?.toLowerCase().includes(q)
     );
   });
@@ -199,7 +199,7 @@ const Records = () => {
               const categoryBadge = {
                 BYLAWS: 'bg-emerald-50 text-emerald-700 border-emerald-200',
                 AGM_MINUTES: 'bg-blue-50 text-blue-700 border-blue-200',
-                HANDOVER_LOG: 'bg-amber-50 text-amber-700 border-amber-200',
+                COMMITTEE_HANDOVER: 'bg-amber-50 text-amber-700 border-amber-200',
                 FINANCIAL_AUDIT: 'bg-purple-50 text-purple-700 border-purple-200',
               }[doc.category] || 'bg-zinc-100 text-zinc-700 border-zinc-200';
 
@@ -215,9 +215,9 @@ const Records = () => {
                       <span className={`text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full border ${categoryBadge}`}>
                         {doc.category.replace('_', ' ')}
                       </span>
-                      {doc.documentRef && (
+                      {doc.referenceCode && (
                         <span className="text-[11px] font-mono text-zinc-400 font-medium">
-                          Ref: {doc.documentRef}
+                          Ref: {doc.referenceCode}
                         </span>
                       )}
                     </div>
@@ -241,7 +241,7 @@ const Records = () => {
 
                   <div className="flex items-center justify-between gap-2 mt-4 pt-2">
                     <a
-                      href={doc.fileUrl}
+                      href={doc.documentUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#542612]/10 hover:bg-[#542612]/20 text-[#542612] dark:text-[#EAA627] text-xs font-bold transition-colors"
@@ -315,7 +315,7 @@ const Records = () => {
                       >
                         <option value="BYLAWS">Bylaws & Rules</option>
                         <option value="AGM_MINUTES">AGM Minutes & Resolutions</option>
-                        <option value="HANDOVER_LOG">Committee Handover Dossier</option>
+                        <option value="COMMITTEE_HANDOVER">Committee Handover Dossier</option>
                         <option value="FINANCIAL_AUDIT">Financial & Audit Report</option>
                       </select>
                     </div>
@@ -326,8 +326,8 @@ const Records = () => {
                       </label>
                       <input
                         type="text"
-                        value={formData.documentRef}
-                        onChange={(e) => setFormData({ ...formData, documentRef: e.target.value })}
+                        value={formData.referenceCode}
+                        onChange={(e) => setFormData({ ...formData, referenceCode: e.target.value })}
                         placeholder="e.g. AGM-2024-RES-04"
                         className="w-full px-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 dark:bg-zinc-800 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#542612]"
                       />
@@ -341,8 +341,8 @@ const Records = () => {
                     <input
                       type="url"
                       required
-                      value={formData.fileUrl}
-                      onChange={(e) => setFormData({ ...formData, fileUrl: e.target.value })}
+                      value={formData.documentUrl}
+                      onChange={(e) => setFormData({ ...formData, documentUrl: e.target.value })}
                       placeholder="https://... or link to cloud PDF"
                       className="w-full px-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 dark:bg-zinc-800 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#542612]"
                     />

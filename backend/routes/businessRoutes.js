@@ -53,7 +53,7 @@ router.put(
 router.put(
   "/:id/approve",
   protect,
-  authorize("ADMIN", "BLOCK_MANAGER"),
+  authorize("ADMIN", "COMMUNITY_HEAD", "BLOCK_MANAGER"),
   approveBusiness
 );
 

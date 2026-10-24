@@ -10,6 +10,8 @@ const {
   deleteMyPosts,
   togglePinPost,
   acknowledgePost,
+  getAcknowledgements,
+  remindNonAcknowledgers,
   likePost,
   commentPost,
   deleteComment
@@ -17,6 +19,8 @@ const {
 
 const protect = require("../middleware/authMiddleware");
 const upload = require("../middleware/uploadMiddleware");
+const validate = require("../middleware/validationMiddleware");
+const { body } = require("express-validator");
 
 
 // Get feed
@@ -33,11 +37,17 @@ router.get(
   getPostById
 );
 
+router.get("/:id/acknowledgements", protect, getAcknowledgements);
+router.post("/:id/remind-non-acknowledgers", protect, remindNonAcknowledgers);
+
 // Create post with image
 router.post(
   "/",
   protect,
   upload.single("image"),
+  body("title").trim().notEmpty().withMessage("Title is required"),
+  body("description").trim().notEmpty().withMessage("Description is required"),
+  validate,
   createPost
 );
 

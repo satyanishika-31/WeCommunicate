@@ -1,4 +1,5 @@
 const House = require("../models/House");
+const Block = require("../models/Block");
 
 
 // CREATE HOUSE
@@ -38,10 +39,29 @@ const createHouse = async (req, res) => {
 // GET ALL HOUSES
 const getHouses = async (req, res) => {
   try {
-    const houses = await House.find()
-      .populate("block", "name blockNumber")
-      .populate("owner", "name email")
-      .populate("residents", "name email");
+    let filter = {};
+    if (req.user.role === "COMMUNITY_HEAD") {
+      const communityBlocks = await Block.find({ community: req.user.community }, "_id");
+      filter.block = { $in: communityBlocks.map((block) => block._id) };
+      if (req.query.block) filter.block = req.query.block;
+    } else if (req.user.role === "BLOCK_MANAGER") {
+      filter.block = req.user.block;
+    } else if (req.user.role === "USER") {
+      filter = {
+        $or: [
+          { residents: req.user._id },
+          { owner: req.user._id },
+          { _id: req.user.house }
+        ]
+      };
+    } else if (req.user.role === "ADMIN") {
+      if (req.query.block) filter.block = req.query.block;
+    }
+
+    const houses = await House.find(filter)
+      .populate("block", "name blockNumber community")
+      .populate("owner", "name email phone")
+      .populate("residents", "name email phone residentType role isApproved");
 
     res.status(200).json({
       success: true,

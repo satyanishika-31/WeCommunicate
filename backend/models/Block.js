@@ -24,6 +24,10 @@ const blockSchema = new mongoose.Schema(
       ref: "User"
     },
 
+    managerAssignedDate: {
+      type: Date
+    },
+
     totalHouses: {
       type: Number,
       default: 0

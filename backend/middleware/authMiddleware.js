@@ -29,6 +29,12 @@ const protect = async (req, res, next) => {
         message: "User not found."
       });
     }
+    if (req.user.role === "USER" && req.user.isApproved === false) {
+      return res.status(403).json({
+        success: false,
+        message: "Your resident account is pending approval."
+      });
+    }
 
     next();
   } catch (error) {

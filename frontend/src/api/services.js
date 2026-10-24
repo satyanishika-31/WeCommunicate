@@ -21,6 +21,8 @@ export const postService = {
   deleteMine: () => data(API.delete('/posts/mine')),
   togglePin: (postId) => data(API.patch(`/posts/${postId}/pin`)),
   acknowledge: (postId) => data(API.post(`/posts/${postId}/acknowledge`)),
+  getAcknowledgements: (postId) => data(API.get(`/posts/${postId}/acknowledgements`)),
+  remindNonAcknowledgers: (postId) => data(API.post(`/posts/${postId}/remind-non-acknowledgers`)),
   toggleLike: (postId) => data(API.post(`/posts/${postId}/like`)),
   addComment: (postId, text) => data(API.post(`/posts/${postId}/comment`, { text })),
   deleteComment: (postId, commentId) => data(API.delete(`/posts/${postId}/comment/${commentId}`)),
@@ -64,6 +66,7 @@ export const complaintService = {
 export const notificationService = {
   getAll: async () => (await data(API.get('/notifications'))).notifications || [],
   markAllAsRead: () => data(API.put('/notifications/read-all')),
+  markAsRead: (id) => data(API.put(`/notifications/${id}/read`)),
 };
 
 export const metaService = {
@@ -75,11 +78,22 @@ export const metaService = {
   assignBlockManager: (communityId, payload) => data(API.post(`/communities/${communityId}/assign-block-manager`, payload)),
   createBlockManager: (communityId, managerData) => data(API.post(`/communities/${communityId}/create-block-manager`, managerData)),
   getBlocks: async () => (await data(API.get('/blocks'))).blocks || [],
-  getHouses: async () => (await data(API.get('/houses'))).houses || [],
-  getUsers: async () => (await data(API.get('/users'))).users || [],
+  getBlockById: (id) => data(API.get(`/blocks/${id}`)),
+  assignBlockManagerDirect: (blockId, residentId) => data(API.put(`/blocks/${blockId}/manager`, { residentId })),
+  removeBlockManagerDirect: (blockId) => data(API.delete(`/blocks/${blockId}/manager`)),
+  getHouses: async (query = '') => (await data(API.get(`/houses${query}`))).houses || [],
+  getUsers: async (query = '') => (await data(API.get(`/users${query}`))).users || [],
+  approveUser: (userId) => data(API.put(`/users/${userId}/approve`)),
   addUser: (userData) => data(API.post('/auth/register', userData)),
   deleteUser: (userId) => data(API.delete(`/users/${userId}`)),
   updateUser: (userId, userData) => data(API.put(`/users/${userId}`, userData)),
+};
+
+export const blockService = {
+  getAll: async () => (await data(API.get('/blocks'))).blocks || [],
+  getById: (id) => data(API.get(`/blocks/${id}`)),
+  assignManager: (blockId, residentId) => data(API.put(`/blocks/${blockId}/manager`, { residentId })),
+  removeManager: (blockId) => data(API.delete(`/blocks/${blockId}/manager`)),
 };
 
 export const recordService = {

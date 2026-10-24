@@ -100,6 +100,7 @@ const Register = () => {
       community,
       password,
       residentType,
+      block: selectedBlock,
       houseNumber: houseNumber.trim(),
       role: 'USER',
     });

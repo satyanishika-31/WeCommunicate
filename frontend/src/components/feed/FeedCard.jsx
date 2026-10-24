@@ -18,6 +18,7 @@ const FeedCard = ({ post, onLikeToggle, onCommentAdded, onPostDeleted, onPostPin
   const [isDeleting, setIsDeleting] = useState(false);
   const [isPinning, setIsPinning] = useState(false);
   const [acks, setAcks] = useState(post.acknowledgements || []);
+  const [ackSummary, setAckSummary] = useState(null);
   const [isAcking, setIsAcking] = useState(false);
   const [showAckList, setShowAckList] = useState(false);
 
@@ -26,7 +27,8 @@ const FeedCard = ({ post, onLikeToggle, onCommentAdded, onPostDeleted, onPostPin
   const isAuthor = Boolean(currentUserId && authorId && currentUserId.toString() === authorId.toString());
   const isAdmin = user?.role === 'ADMIN';
   const canDelete = isAuthor || isAdmin;
-  const canPin = isAuthor || isAdmin;
+  const canPin = isAuthor || ['ADMIN', 'COMMUNITY_HEAD', 'BLOCK_MANAGER'].includes(user?.role);
+  const isManager = ['ADMIN', 'COMMUNITY_HEAD', 'BLOCK_MANAGER'].includes(user?.role);
 
   const handleDelete = async (e) => {
     e.stopPropagation();
@@ -78,6 +80,13 @@ const FeedCard = ({ post, onLikeToggle, onCommentAdded, onPostDeleted, onPostPin
     } finally {
       setIsAcking(false);
     }
+  };
+
+  const loadAckSummary = async () => {
+    if (!isManager) return;
+    const summary = await postService.getAcknowledgements(post._id);
+    setAckSummary(summary);
+    setShowAckList(true);
   };
 
   const isLiked = post.likes?.includes(user?._id) || false;
@@ -260,18 +269,29 @@ const FeedCard = ({ post, onLikeToggle, onCommentAdded, onPostDeleted, onPostPin
               <div className="flex items-center gap-2">
                 <CheckCircle2 className={`w-4 h-4 ${isAckedByMe ? 'text-emerald-600' : 'text-[#542612]/40'}`} />
                 <span className="font-bold text-[#542612] dark:text-white">
-                  {acks.length} resident{acks.length === 1 ? '' : 's'} confirmed & acknowledged
+                  {ackSummary ? `Acknowledged ${ackSummary.acknowledgedCount} of ${ackSummary.totalRecipients}` : `${post.acknowledgementsCount ?? acks.length} resident${(post.acknowledgementsCount ?? acks.length) === 1 ? '' : 's'} confirmed & acknowledged`}
                 </span>
-                {isAdmin && acks.length > 0 && (
+                {isManager && (
                   <button
                     type="button"
-                    onClick={() => setShowAckList(!showAckList)}
+                    onClick={showAckList ? () => setShowAckList(false) : loadAckSummary}
                     className="text-[11px] underline text-[#542612]/70 dark:text-[#F7F0DF]/70 hover:text-[#542612] ml-1 cursor-pointer"
                   >
-                    {showAckList ? 'Hide list' : 'View verified list'}
+                    {showAckList ? 'Hide list' : 'View acknowledgement status'}
                   </button>
                 )}
               </div>
+              {showAckList && ackSummary && (
+                <div className="mt-3 border-t pt-2">
+                  <p className="font-bold">Not yet acknowledged</p>
+                  {ackSummary.notAcknowledged.length ? ackSummary.notAcknowledged.map((resident) => (
+                    <p key={resident._id}>{resident.name} ({resident.houseNumber || 'No house number'})</p>
+                  )) : <p>Everyone has acknowledged.</p>}
+                  <button type="button" onClick={() => postService.remindNonAcknowledgers(post._id)} className="mt-2 underline">
+                    Remind non-acknowledgers
+                  </button>
+                </div>
+              )}
 
               <button
                 type="button"

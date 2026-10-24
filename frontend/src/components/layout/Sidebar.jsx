@@ -254,7 +254,7 @@ const Sidebar = () => {
               </span>
               <div className="flex items-center gap-1.5 mt-0.5">
                 <span className="text-[10px] text-white/80 font-medium truncate">
-                  {user?.house?.houseNumber || 'A-101'}
+                  {user?.flatNumber || user?.houseNumber || user?.house?.houseNumber || 'Flat N/A'}
                 </span>
                 <Badge type={role} size="sm" className="text-[9px] py-0 px-1" />
               </div>

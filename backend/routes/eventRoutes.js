@@ -33,7 +33,7 @@ router.get(
 router.post(
   "/",
   protect,
-  authorize("ADMIN", "BLOCK_MANAGER"),
+  authorize("ADMIN", "COMMUNITY_HEAD", "BLOCK_MANAGER"),
   upload.single("poster"),
   createEvent
 );
@@ -42,7 +42,7 @@ router.post(
 router.put(
   "/:id",
   protect,
-  authorize("ADMIN", "BLOCK_MANAGER"),
+  authorize("ADMIN", "COMMUNITY_HEAD", "BLOCK_MANAGER"),
   upload.single("poster"),
   updateEvent
 );
@@ -51,7 +51,7 @@ router.put(
 router.delete(
   "/:id",
   protect,
-  authorize("ADMIN", "BLOCK_MANAGER"),
+  authorize("ADMIN", "COMMUNITY_HEAD", "BLOCK_MANAGER"),
   deleteEvent
 );
 

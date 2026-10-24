@@ -9,9 +9,12 @@ export const NotificationProvider = ({ children }) => {
 
   const fetchNotifications = async () => {
     setLoading(true);
-    const data = await notificationService.getAll();
-    setNotifications(data || []);
-    setLoading(false);
+    try {
+      const data = await notificationService.getAll();
+      setNotifications(data || []);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {

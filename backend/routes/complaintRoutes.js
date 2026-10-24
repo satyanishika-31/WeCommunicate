@@ -14,6 +14,8 @@ const {
 const protect = require("../middleware/authMiddleware");
 const authorize = require("../middleware/roleMiddleware");
 const upload = require("../middleware/uploadMiddleware");
+const validate = require("../middleware/validationMiddleware");
+const { body } = require("express-validator");
 
 
 // Create complaint
@@ -21,6 +23,9 @@ router.post(
   "/",
   protect,
   upload.single("image"),
+  body("title").trim().notEmpty().withMessage("Title is required"),
+  body("description").trim().notEmpty().withMessage("Description is required"),
+  validate,
   createComplaint
 );
 
@@ -28,7 +33,7 @@ router.post(
 router.get(
   "/",
   protect,
-  authorize("ADMIN", "BLOCK_MANAGER", "USER"),
+  authorize("ADMIN", "COMMUNITY_HEAD", "BLOCK_MANAGER", "USER"),
   getComplaints
 );
 
@@ -43,7 +48,7 @@ router.get(
 router.put(
   "/:id",
   protect,
-  authorize("ADMIN", "BLOCK_MANAGER"),
+  authorize("ADMIN", "COMMUNITY_HEAD", "BLOCK_MANAGER"),
   updateComplaint
 );
 
@@ -51,7 +56,7 @@ router.put(
 router.put(
   "/:id/status",
   protect,
-  authorize("ADMIN", "BLOCK_MANAGER"),
+  authorize("ADMIN", "COMMUNITY_HEAD", "BLOCK_MANAGER"),
   updateComplaintStatus
 );
 
@@ -59,7 +64,7 @@ router.put(
 router.put(
   "/:id/assign",
   protect,
-  authorize("ADMIN", "BLOCK_MANAGER"),
+  authorize("ADMIN", "COMMUNITY_HEAD", "BLOCK_MANAGER"),
   assignComplaint
 );
 

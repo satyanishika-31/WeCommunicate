@@ -28,9 +28,7 @@ const RaiseComplaintModal = ({ isOpen, onClose, onCreated }) => {
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('WATER');
   const [description, setDescription] = useState('');
-  const [intakeRoute, setIntakeRoute] = useState('RESIDENT_APP');
-  const [flatNumber, setFlatNumber] = useState(user?.houseNumber || 'A-101');
-  const [loading, setLoading] = useState(false);
+  const [flatNumber, setFlatNumber] = useState(user?.flatNumber || user?.houseNumber || user?.house?.houseNumber || '');
 
   const handleSubmit = async (e) => {
     e.preventDefault();

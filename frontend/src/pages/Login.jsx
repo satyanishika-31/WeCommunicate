@@ -20,7 +20,13 @@ const Login = () => {
     try {
       const res = await login(email, password);
       if (res.success) {
-        navigate('/home');
+        if (res.user?.role === 'BLOCK_MANAGER') {
+          navigate('/manager');
+        } else if (res.user?.role === 'COMMUNITY_HEAD') {
+          navigate('/admin');
+        } else {
+          navigate('/home');
+        }
       } else {
         setError(res.message || 'Login failed. Please check credentials.');
       }

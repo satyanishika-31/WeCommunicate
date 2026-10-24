@@ -6,10 +6,18 @@ const express = require("express");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const fs = require("fs");
+const rateLimit = require("express-rate-limit");
 
 const connectDB = require("./config/db");
 
 const app = express();
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: "Too many authentication attempts. Please try again later." }
+});
 
 
 // ==================== CORS ====================
@@ -105,6 +113,8 @@ const recordRoutes = require("./routes/recordRoutes");
 
 
 // Authentication
+app.use("/api/auth/login", authLimiter);
+app.use("/api/auth/register", authLimiter);
 app.use("/api/auth", authRoutes);
 
 // Users
@@ -173,7 +183,9 @@ app.use((err, req, res, next) => {
 
   res.status(err.statusCode || 500).json({
     success: false,
-    message: err.message || "Internal Server Error"
+    message: process.env.NODE_ENV === "production"
+      ? "Internal Server Error"
+      : (err.message || "Internal Server Error")
   });
 });
 
@@ -190,7 +202,12 @@ const startServer = async () => {
 
     if (!connected) {
       console.warn("Starting backend without MongoDB. Auth APIs will fail until MongoDB is available.");
+    } else {
+      const syncDatabase = require("./utils/dbSync");
+      await syncDatabase();
     }
+    const startComplaintReminderJob = require("./jobs/complaintReminders");
+    startComplaintReminderJob();
 
     app.listen(port, () => {
       console.log(`We Communicate Backend running on port ${port}`);

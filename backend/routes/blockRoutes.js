@@ -26,7 +26,7 @@ router.get(
 router.get(
   "/:id",
   protect,
-  authorize("ADMIN", "BLOCK_MANAGER", "USER"),
+  authorize("ADMIN", "COMMUNITY_HEAD", "BLOCK_MANAGER", "USER"),
   getBlockById
 );
 
@@ -58,7 +58,15 @@ router.delete(
 router.put(
   "/:id/manager",
   protect,
-  authorize("ADMIN"),
+  authorize("ADMIN", "COMMUNITY_HEAD"),
+  assignManager
+);
+
+// Remove block manager
+router.delete(
+  "/:id/manager",
+  protect,
+  authorize("ADMIN", "COMMUNITY_HEAD"),
   assignManager
 );
 

@@ -7,6 +7,10 @@ const houseSchema = new mongoose.Schema(
       required: true
     },
 
+    flatNumber: {
+      type: String
+    },
+
     block: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Block",
@@ -36,8 +40,18 @@ const houseSchema = new mongoose.Schema(
     }
   },
   {
-    timestamps: true
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true }
   }
 );
+
+houseSchema.pre("save", function() {
+  if (this.houseNumber && !this.flatNumber) {
+    this.flatNumber = this.houseNumber;
+  } else if (this.flatNumber && !this.houseNumber) {
+    this.houseNumber = this.flatNumber;
+  }
+});
 
 module.exports = mongoose.model("House", houseSchema);

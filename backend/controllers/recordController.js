@@ -4,7 +4,7 @@
 const getRecords = async (req, res) => {
   try {
     const { category } = req.query;
-    let filter = {};
+    let filter = { community: req.user.community };
     if (category) filter.category = category;
 
     const records = await Record.find(filter)
@@ -54,7 +54,7 @@ const createRecord = async (req, res) => {
       referenceCode: code,
       effectiveDate: effectiveDate || new Date(),
       uploadedBy: req.user._id,
-      community: community || req.user.community || "Society"
+      community: req.user.community
     });
 
     res.status(201).json({

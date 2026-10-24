@@ -35,6 +35,11 @@ const userSchema = new mongoose.Schema(
       trim: true
     },
 
+    flatNumber: {
+      type: String,
+      trim: true
+    },
+
     role: {
       type: String,
       enum: ["ADMIN", "COMMUNITY_HEAD", "BLOCK_MANAGER", "USER"],
@@ -56,13 +61,32 @@ const userSchema = new mongoose.Schema(
       ref: "Block"
     },
 
+    assignedDate: {
+      type: Date
+    },
+
     profileImage: {
       type: String
+    },
+
+    isApproved: {
+      type: Boolean,
+      default: true
     }
   },
   {
-    timestamps: true
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true }
   }
 );
+
+userSchema.pre("save", function () {
+  if (this.houseNumber && !this.flatNumber) {
+    this.flatNumber = this.houseNumber;
+  } else if (this.flatNumber && !this.houseNumber) {
+    this.houseNumber = this.flatNumber;
+  }
+});
 
 module.exports = mongoose.model("User", userSchema);

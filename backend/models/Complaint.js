@@ -93,6 +93,10 @@ const complaintSchema = new mongoose.Schema(
 
     resolvedAt: {
       type: Date
+    },
+
+    lastReminderAt: {
+      type: Date
     }
   },
   {

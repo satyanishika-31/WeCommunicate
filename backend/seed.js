@@ -16,11 +16,14 @@ const seedDatabase = async () => {
     await mongoose.connect(mongoUri, { serverSelectionTimeoutMS: 8000 });
     console.log("Connected to MongoDB successfully.");
 
-    const adminEmail = "admin@gmail.com";
-    const plainPassword = "1234567890";
+    const adminEmail = process.env.ADMIN_EMAIL;
+    const plainPassword = process.env.ADMIN_PASSWORD;
+    if (!adminEmail || !plainPassword) {
+      throw new Error("ADMIN_EMAIL and ADMIN_PASSWORD must be set");
+    }
     const hashedPassword = await bcrypt.hash(plainPassword, 10);
 
-    let admin = await User.findOne({ email: adminEmail });
+    let admin = await User.findOne({ role: "ADMIN" });
     if (!admin) {
       admin = await User.create({
         name: "System Admin",
@@ -34,10 +37,7 @@ const seedDatabase = async () => {
       });
       console.log(`✓ Admin user created: ${adminEmail} (Role: ADMIN, Password: ${plainPassword})`);
     } else {
-      admin.role = "ADMIN";
-      admin.password = hashedPassword;
-      await admin.save();
-      console.log(`✓ Existing user ${adminEmail} updated to Role: ADMIN with password: ${plainPassword}`);
+      console.log(`✓ Existing admin retained: ${admin.email}`);
     }
 
     // Communities
@@ -67,7 +67,7 @@ const seedDatabase = async () => {
     console.log("\n==========================================");
     console.log("Admin credentials ready:");
     console.log("Email:    admin@gmail.com");
-    console.log("Password: 1234567890");
+    console.log("Password: configured in ADMIN_PASSWORD");
     console.log("Role:     ADMIN");
     console.log("==========================================\n");
 

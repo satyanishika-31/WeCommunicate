@@ -37,7 +37,7 @@ const AdminDashboard = () => {
   const isAdmin = currentUser?.role === 'ADMIN';
   const isCommunityHead = currentUser?.role === 'COMMUNITY_HEAD';
 
-  const [activeTab, setActiveTab] = useState('COMMUNITIES'); // COMMUNITIES | RESIDENTS | BLOCKS | BUSINESS_APPROVALS
+  const [activeTab, setActiveTab] = useState(isCommunityHead ? 'BLOCKS' : 'COMMUNITIES'); // COMMUNITIES | RESIDENTS | BLOCKS | BUSINESS_APPROVALS
   const [communities, setCommunities] = useState([]);
   const [users, setUsers] = useState([]);
   const [blocks, setBlocks] = useState([]);
@@ -54,6 +54,7 @@ const AdminDashboard = () => {
   const [commBlocksText, setCommBlocksText] = useState('Block A, Block B, Block C, Block D');
   const [commFlatsText, setCommFlatsText] = useState('101, 102, 103, 104, 201, 202, 203, 204');
   const [commManager, setCommManager] = useState('');
+  const [creatingCommunity, setCreatingCommunity] = useState(false);
 
   // Selected Community Detail Modal
   const [selectedCommunityDetail, setSelectedCommunityDetail] = useState(null);
@@ -72,6 +73,22 @@ const AdminDashboard = () => {
   const [assigningBlock, setAssigningBlock] = useState(null);
   const [selectedResidentId, setSelectedResidentId] = useState('');
   const [assigningLoading, setAssigningLoading] = useState(false);
+  const [approvingUserId, setApprovingUserId] = useState(null);
+  const [expandedBlockIds, setExpandedBlockIds] = useState({});
+
+  const selectedCommunity = selectedCommunityDetail?.community;
+  const headBlockOptions = selectedCommunity?.blocksList?.length
+    ? selectedCommunity.blocksList
+    : blocks
+      .filter((block) => block.community === selectedCommunity?.name)
+      .map((block) => block.name || block.blockNumber)
+      .filter(Boolean);
+  const headFlatOptions = selectedCommunity?.flatsList?.length
+    ? selectedCommunity.flatsList
+    : houses
+      .filter((house) => house.block?.community === selectedCommunity?.name)
+      .map((house) => house.houseNumber)
+      .filter(Boolean);
 
   const fetchData = async () => {
     setLoading(true);
@@ -80,7 +97,7 @@ const AdminDashboard = () => {
       metaService.getUsers(),
       metaService.getBlocks(),
       metaService.getHouses(),
-      complaintService.getAll(),
+      isCommunityHead ? Promise.resolve([]) : complaintService.getAll(),
       businessService.getAll(),
     ]);
     setCommunities(cList || []);
@@ -94,7 +111,7 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [isCommunityHead]);
 
   useEffect(() => {
     if (isCommunityHead) {
@@ -117,7 +134,8 @@ const AdminDashboard = () => {
 
   const handleCreateCommunity = async (e) => {
     e.preventDefault();
-    if (!commName.trim()) return;
+    if (!commName.trim() || creatingCommunity) return;
+    setCreatingCommunity(true);
     try {
       const bList = commBlocksText.split(',').map((b) => b.trim()).filter(Boolean);
       const fList = commFlatsText.split(',').map((f) => f.trim()).filter(Boolean);
@@ -125,7 +143,7 @@ const AdminDashboard = () => {
       await metaService.addCommunity({
         name: commName.trim(),
         location: commLocation.trim() || 'Central Sector',
-        code: commCode.trim() || ('COMM-' + Math.floor(100 + Math.random() * 900)),
+        code: commCode.trim().toUpperCase() || undefined,
         totalBlocks: bList.length || 4,
         totalFlats: fList.length || 120,
         blocksList: bList,
@@ -140,6 +158,8 @@ const AdminDashboard = () => {
       await fetchData();
     } catch (err) {
       alert(err.response?.data?.message || err.message || 'Failed to create community');
+    } finally {
+      setCreatingCommunity(false);
     }
   };
 
@@ -194,6 +214,21 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleMakeResidentBlockManager = (resident) => {
+    const blockName = resident.block?.name ||
+      resident.block?.blockNumber ||
+      resident.houseNumber?.split('-')[0];
+    if (!blockName) {
+      alert('This resident is not linked to a block yet.');
+      return;
+    }
+    const block = selectedCommunityDetail?.blocks?.find(
+      (item) => item.name === blockName || item.blockNumber === blockName
+    ) || { name: blockName };
+    setAssigningBlock(block);
+    setSelectedResidentId(resident._id);
+  };
+
   const handleDeleteCommunity = async (id, name) => {
     if (window.confirm(`Are you sure you want to delete community "${name}"?`)) {
       await metaService.deleteCommunity(id);
@@ -205,6 +240,27 @@ const AdminDashboard = () => {
     if (window.confirm(`Are you sure you want to remove user "${name}" from system?`)) {
       await metaService.deleteUser(id);
       fetchData();
+    }
+  };
+
+  const handleApproveUser = async (id) => {
+    setApprovingUserId(id);
+    try {
+      await metaService.approveUser(id);
+      await fetchData();
+      setSelectedCommunityDetail((current) => {
+        if (!current?.residents) return current;
+        return {
+          ...current,
+          residents: current.residents.map((resident) =>
+            resident._id === id ? { ...resident, isApproved: true } : resident
+          ),
+        };
+      });
+    } catch (err) {
+      alert(err.response?.data?.message || err.message || 'Failed to approve resident');
+    } finally {
+      setApprovingUserId(null);
     }
   };
 
@@ -263,7 +319,7 @@ const AdminDashboard = () => {
                 System Admin Portal — Communities & Governance
               </h1>
               <p className="text-xs text-[#F7F0DF]">
-                Logged in as <strong>admin@gmail.com</strong> • Full authority over communities, residents, blocks, and approvals
+                Logged in as <strong>configured administrator</strong> • Full authority over communities, residents, blocks, and approvals
               </p>
             </div>
           </div>
@@ -318,8 +374,8 @@ const AdminDashboard = () => {
         <div className="flex items-center justify-between border-b border-[#542612]/20 dark:border-[#F7F0DF]/20 pb-1 flex-wrap gap-2">
           <div className="flex items-center gap-1 sm:gap-2">
             {[
-              { id: 'COMMUNITIES', label: 'Communities Hub', count: communities.length, show: true },
-              { id: 'RESIDENTS', label: 'All Residents', count: users.length, show: true },
+              { id: 'COMMUNITIES', label: 'Communities Hub', count: communities.length, show: isAdmin },
+              { id: 'RESIDENTS', label: 'Residents', count: users.length, show: true },
               { id: 'BLOCKS', label: 'Blocks & Towers', count: blocks.length, show: isCommunityHead },
               { id: 'BUSINESS_APPROVALS', label: 'Business Approvals', count: businesses.length, show: isAdmin },
             ].filter((t) => t.show).map((tab) => (
@@ -337,7 +393,7 @@ const AdminDashboard = () => {
             ))}
           </div>
 
-          {activeTab === 'COMMUNITIES' && (
+          {isAdmin && activeTab === 'COMMUNITIES' && (
             isAdmin && (
               <button
                 onClick={() => setShowAddCommModal(true)}
@@ -351,7 +407,7 @@ const AdminDashboard = () => {
         </div>
 
         {/* TAB 1: COMMUNITIES HUB (ADD, VIEW INFO, DELETE) */}
-        {activeTab === 'COMMUNITIES' && (
+        {isAdmin && activeTab === 'COMMUNITIES' && (
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {communities.map((comm) => (
@@ -445,6 +501,14 @@ const AdminDashboard = () => {
         {/* TAB 2: RESIDENTS */}
         {activeTab === 'RESIDENTS' && (
           <div className="bg-[#F5EFE1] dark:bg-[#542612] rounded-3xl p-6 border border-[#542612]/15 dark:border-[#F7F0DF]/20 shadow-sm overflow-x-auto">
+            {users.some((user) => !user.isApproved && user.role === 'USER') && (
+              <div className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-xs text-amber-900">
+                <span className="font-bold">
+                  {users.filter((user) => !user.isApproved && user.role === 'USER').length} resident approval(s) pending
+                </span>
+                <span>Review the residents below and approve valid registrations.</span>
+              </div>
+            )}
             <table className="w-full text-left text-xs">
               <thead className="border-b border-[#542612]/15 dark:border-[#F7F0DF]/20 text-[#542612]/60 uppercase font-bold">
                 <tr>
@@ -478,13 +542,24 @@ const AdminDashboard = () => {
                       <Badge type={u.role} size="sm" />
                     </td>
                     <td className="py-3.5 px-4 text-right">
-                      <button
-                        onClick={() => handleDeleteUser(u._id, u.name)}
-                        className="p-1.5 text-[#542612]/60 hover:text-[#542612] hover:bg-[#F7F0DF] dark:hover:bg-[#542612]/40 rounded-lg transition-colors"
-                        title="Delete User"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center justify-end gap-2">
+                        {!u.isApproved && u.role === 'USER' && (
+                          <button
+                            onClick={() => handleApproveUser(u._id)}
+                            disabled={approvingUserId === u._id}
+                            className="px-2.5 py-1.5 rounded-lg bg-emerald-700 text-white text-[10px] font-bold disabled:opacity-60"
+                          >
+                            {approvingUserId === u._id ? 'Approving...' : 'Approve'}
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleDeleteUser(u._id, u.name)}
+                          className="p-1.5 text-[#542612]/60 hover:text-[#542612] hover:bg-[#F7F0DF] dark:hover:bg-[#542612]/40 rounded-lg transition-colors"
+                          title="Delete User"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -501,28 +576,36 @@ const AdminDashboard = () => {
                 key={bl._id}
                 className="bg-[#F5EFE1] dark:bg-[#542612] rounded-3xl p-6 border border-[#542612]/15 dark:border-[#F7F0DF]/20 shadow-sm space-y-3"
               >
-                <div className="flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => setExpandedBlockIds((current) => ({
+                    ...current,
+                    [bl._id]: !current[bl._id],
+                  }))}
+                  className="w-full flex items-center justify-between text-left"
+                >
                   <h3 className="font-extrabold text-lg text-[#542612] dark:text-white">
                     {bl.name} (Block {bl.blockNumber})
                   </h3>
                   <span className="text-xs font-bold bg-[#542612]/10 text-[#542612] px-3 py-1 rounded-full">
-                    {bl.totalFlats} Flats
+                    {getBlockResidents(bl).length} Residents
                   </span>
-                </div>
+                </button>
                 <p className="text-xs text-[#542612]/70">
                   Assigned Manager:{' '}
                   <strong>{bl.manager ? `${bl.manager.name} (${bl.manager.houseNumber || 'Flat not set'})` : 'Not assigned'}</strong>
                 </p>
+                {expandedBlockIds[bl._id] && (
                 <div className="border-t border-[#542612]/10 pt-3 space-y-2">
                   <div className="flex items-center justify-between">
                     <h4 className="text-xs font-bold uppercase tracking-wider text-[#542612]/70">
-                      Owners in this block
+                      Residents in this block
                     </h4>
                     <span className="text-[10px] text-[#542612]/60">
-                      {getBlockResidents(bl).filter((resident) => resident.residentType === 'OWNER').length} owners
+                      {getBlockResidents(bl).length} residents
                     </span>
                   </div>
-                  {getBlockResidents(bl).filter((resident) => resident.residentType === 'OWNER').map((resident) => {
+                  {getBlockResidents(bl).map((resident) => {
                     const isManager = bl.manager?._id === resident._id;
                     return (
                       <div
@@ -546,12 +629,13 @@ const AdminDashboard = () => {
                       </div>
                     );
                   })}
-                  {getBlockResidents(bl).filter((resident) => resident.residentType === 'OWNER').length === 0 && (
+                  {getBlockResidents(bl).length === 0 && (
                     <p className="text-[11px] text-[#542612]/60 italic">
-                      No owners found in this block.
+                      No residents found in this block.
                     </p>
                   )}
                 </div>
+                )}
               </div>
             ))}
           </div>
@@ -703,9 +787,10 @@ const AdminDashboard = () => {
                   </button>
                   <button
                     type="submit"
-                    className="px-5 py-2.5 rounded-xl bg-[#542612] hover:bg-[#542612] text-white font-bold transition-colors cursor-pointer"
+                    disabled={creatingCommunity}
+                    className="px-5 py-2.5 rounded-xl bg-[#542612] hover:bg-[#542612] disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold transition-colors cursor-pointer"
                   >
-                    Create Community
+                    {creatingCommunity ? 'Creating...' : 'Create Community'}
                   </button>
                 </div>
               </form>
@@ -746,6 +831,24 @@ const AdminDashboard = () => {
                 </button>
               </div>
 
+              {isCommunityHead && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+                  {[
+                    ['Blocks', selectedCommunityDetail.totalBlocks ?? selectedCommunityDetail.blocks?.length ?? 0],
+                    ['Total Houses', selectedCommunityDetail.totalHouses ?? selectedCommunityDetail.houses?.length ?? 0],
+                    ['Occupied', selectedCommunityDetail.occupiedHouses ?? 0],
+                    ['Free', selectedCommunityDetail.availableHouses ?? 0],
+                    ['Residents', selectedCommunityDetail.totalResidents ?? selectedCommunityDetail.residents?.length ?? 0],
+                    ['Block Heads', selectedCommunityDetail.blocks?.filter((block) => block.manager).length ?? 0],
+                  ].map(([label, value]) => (
+                    <div key={label} className="p-3 rounded-xl bg-white dark:bg-[#542612] border border-[#542612]/15 text-center">
+                      <span className="block text-[10px] uppercase font-bold text-[#542612]/60">{label}</span>
+                      <span className="block mt-1 text-xl font-extrabold text-[#542612] dark:text-white">{value}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               {/* SECTION 1: COMMUNITY HEAD CARD */}
               <div className="bg-[#F7F0DF] dark:bg-[#542612]/60 p-5 rounded-2xl border border-[#542612]/20 space-y-4">
                 <div className="flex items-center justify-between">
@@ -757,7 +860,11 @@ const AdminDashboard = () => {
                   </div>
                   {isAdmin && (
                     <button
-                      onClick={() => setShowAssignHeadModal(true)}
+                      onClick={() => {
+                        setHeadBlock(headBlockOptions[0] || '');
+                        setHeadFlat(headFlatOptions[0] || '');
+                        setShowAssignHeadModal(true);
+                      }}
                       className="px-3 py-1.5 rounded-xl bg-[#542612] text-white text-xs font-bold hover:bg-[#63351E] transition-colors"
                     >
                       {selectedCommunityDetail.communityHead ? 'Update Head' : 'Assign / Create Head'}
@@ -831,6 +938,36 @@ const AdminDashboard = () => {
                           </span>
                           <Badge type="BLOCK_MANAGER" size="sm" />
                         </div>
+                        <div className="grid grid-cols-4 gap-1 text-center text-[10px]">
+                          <div className="rounded-lg bg-[#F7F0DF] dark:bg-[#542612]/60 p-1.5">
+                            <span className="block text-[#542612]/60">Houses</span>
+                            <strong>{blk.totalHouses || 0}</strong>
+                          </div>
+                          <div className="rounded-lg bg-[#F7F0DF] dark:bg-[#542612]/60 p-1.5">
+                            <span className="block text-[#542612]/60">Occupied</span>
+                            <strong>{blk.occupiedHouses || 0}</strong>
+                          </div>
+                          <div className="rounded-lg bg-[#F7F0DF] dark:bg-[#542612]/60 p-1.5">
+                            <span className="block text-[#542612]/60">Free</span>
+                            <strong>{blk.availableHouses || 0}</strong>
+                          </div>
+                          <div className="rounded-lg bg-[#F7F0DF] dark:bg-[#542612]/60 p-1.5">
+                            <span className="block text-[#542612]/60">Residents</span>
+                            <strong>{blk.residentCount || 0}</strong>
+                          </div>
+                        </div>
+                        {blk.houses?.length > 0 && (
+                          <div className="max-h-32 overflow-y-auto rounded-lg border border-[#542612]/10">
+                            {blk.houses.map((house) => (
+                              <div key={house._id} className="flex items-center justify-between px-2 py-1.5 text-[10px] border-b last:border-b-0 border-[#542612]/10">
+                                <span className="font-bold">{house.houseNumber}</span>
+                                <span className={house.status === 'VACANT' && !house.residents?.length && !house.owner ? 'text-emerald-700' : 'text-amber-700'}>
+                                  {house.status === 'VACANT' && !house.residents?.length && !house.owner ? 'Available' : (house.residents?.map((resident) => resident.name).join(', ') || house.owner?.name || 'Occupied')}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
 
                         {blk.manager ? (
                           <div className="space-y-1.5 text-[#542612]/80">
@@ -904,6 +1041,7 @@ const AdminDashboard = () => {
                           <th className="py-2.5 px-3">Phone</th>
                           <th className="py-2.5 px-3">Flat / Unit</th>
                           <th className="py-2.5 px-3">Type</th>
+                          {isCommunityHead && <th className="py-2.5 px-3">Block Head</th>}
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-[#F7F0DF]">
@@ -923,6 +1061,35 @@ const AdminDashboard = () => {
                                 {r.residentType || 'OWNER'}
                               </span>
                             </td>
+                            {isCommunityHead && (
+                              <td className="py-2 px-3">
+                                <div className="flex flex-wrap items-center gap-1">
+                                  {!r.isApproved && r.role === 'USER' && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleApproveUser(r._id)}
+                                      disabled={approvingUserId === r._id}
+                                      className="px-2 py-1 rounded-lg bg-emerald-700 text-white text-[10px] font-bold disabled:opacity-60"
+                                    >
+                                      {approvingUserId === r._id ? 'Approving...' : 'Approve'}
+                                    </button>
+                                  )}
+                                  {r.role === 'BLOCK_MANAGER' ? (
+                                    <span className="text-[10px] font-bold text-emerald-700">
+                                      Block Head
+                                    </span>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleMakeResidentBlockManager(r)}
+                                      className="px-2 py-1 rounded-lg bg-[#542612] text-white text-[10px] font-bold hover:bg-[#63351E]"
+                                    >
+                                      Make Block Head
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                            )}
                           </tr>
                         ))}
                       </tbody>
@@ -1009,25 +1176,33 @@ const AdminDashboard = () => {
                     <label className="block font-bold text-[#542612] uppercase tracking-wider mb-1">
                       Block
                     </label>
-                    <input
-                      type="text"
+                    <select
+                      required
                       value={headBlock}
                       onChange={(e) => setHeadBlock(e.target.value)}
-                      placeholder="e.g. Block A"
                       className="w-full px-3 py-2 rounded-xl bg-[#F7F0DF] border border-[#542612]/20 text-[#542612] focus:outline-none"
-                    />
+                    >
+                      <option value="">-- Select block --</option>
+                      {headBlockOptions.map((block) => (
+                        <option key={block} value={block}>{block}</option>
+                      ))}
+                    </select>
                   </div>
                   <div>
                     <label className="block font-bold text-[#542612] uppercase tracking-wider mb-1">
                       Flat Number
                     </label>
-                    <input
-                      type="text"
+                    <select
+                      required
                       value={headFlat}
                       onChange={(e) => setHeadFlat(e.target.value)}
-                      placeholder="e.g. 101"
                       className="w-full px-3 py-2 rounded-xl bg-[#F7F0DF] border border-[#542612]/20 text-[#542612] focus:outline-none"
-                    />
+                    >
+                      <option value="">-- Select flat --</option>
+                      {headFlatOptions.map((flat) => (
+                        <option key={flat} value={flat}>{flat}</option>
+                      ))}
+                    </select>
                   </div>
                 </div>
 
@@ -1109,7 +1284,6 @@ const AdminDashboard = () => {
                   >
                     <option value="">-- Choose Resident & Flat Number --</option>
                     {getBlockResidents(assigningBlock)
-                      .filter((resident) => resident.residentType === 'OWNER')
                       .map((res) => (
                       <option key={res._id} value={res._id}>
                         {res.name} — Flat: {res.houseNumber || 'N/A'} ({res.email})

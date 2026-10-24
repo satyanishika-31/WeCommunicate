@@ -35,10 +35,12 @@ const seedInitialData = async () => {
     const User = require("../models/User");
     const Community = require("../models/Community");
 
-    const adminEmail = "admin@gmail.com";
-    const existingAdmin = await User.findOne({ email: adminEmail });
+    const adminEmail = process.env.ADMIN_EMAIL;
+    const adminPassword = process.env.ADMIN_PASSWORD;
+    if (!adminEmail || !adminPassword) return;
+    const existingAdmin = await User.findOne({ role: "ADMIN" });
     if (!existingAdmin) {
-      const hashedPassword = await bcrypt.hash("1234567890", 10);
+      const hashedPassword = await bcrypt.hash(adminPassword, 10);
       await User.create({
         name: "System Admin",
         email: adminEmail,
@@ -49,22 +51,7 @@ const seedInitialData = async () => {
         community: "Emerald Towers Enclave",
         houseNumber: "ADMIN-01"
       });
-      console.log(`Seeded default Admin user: ${adminEmail}`);
-    } else {
-      let needsUpdate = false;
-      if (existingAdmin.role !== "ADMIN") {
-        existingAdmin.role = "ADMIN";
-        needsUpdate = true;
-      }
-      const isMatch = await bcrypt.compare("1234567890", existingAdmin.password);
-      if (!isMatch) {
-        existingAdmin.password = await bcrypt.hash("1234567890", 10);
-        needsUpdate = true;
-      }
-      if (needsUpdate) {
-        await existingAdmin.save();
-        console.log(`Updated default Admin user (${adminEmail}) role to ADMIN and refreshed password.`);
-      }
+      console.log(`Seeded configured admin user: ${adminEmail}`);
     }
 
     const communityCount = await Community.countDocuments();
@@ -110,7 +97,7 @@ const seedInitialData = async () => {
     const Record = require("../models/Record");
     const recordCount = await Record.countDocuments();
     if (recordCount === 0) {
-      const adminUser = await User.findOne({ email: "admin@gmail.com" });
+      const adminUser = await User.findOne({ role: "ADMIN" });
       if (adminUser) {
         await Record.insertMany([
           {
@@ -161,7 +148,7 @@ const connectDB = async () => {
     console.log("MongoDB Connected Successfully");
     return true;
   } catch (error) {
-    console.error("MongoDB connection failed:", error);
+    console.error("MongoDB connection failed:", error.message);
 
     if (error?.code === "ECONNREFUSED" || error?.syscall === "querySrv") {
       console.error(

@@ -9,6 +9,9 @@ const {
 const protect = require("../middleware/authMiddleware");
 const authorize = require("../middleware/roleMiddleware");
 const upload = require("../middleware/uploadMiddleware");
+const recordsUpload = upload.records;
+const validate = require("../middleware/validationMiddleware");
+const { body } = require("express-validator");
 
 // Get records (all authenticated residents can read)
 router.get("/", protect, getRecords);
@@ -17,8 +20,10 @@ router.get("/", protect, getRecords);
 router.post(
   "/",
   protect,
-  authorize("ADMIN", "BLOCK_MANAGER"),
-  upload.single("document"),
+  authorize("ADMIN", "COMMUNITY_HEAD", "BLOCK_MANAGER"),
+  recordsUpload.single("document"),
+  body("title").trim().notEmpty().withMessage("Record title is required"),
+  validate,
   createRecord
 );
 

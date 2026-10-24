@@ -2,7 +2,7 @@ const Business = require("../models/Business");
 
 const canManageBusiness = (business, user) =>
   business.owner.toString() === user._id.toString() ||
-  ["ADMIN", "BLOCK_MANAGER"].includes(user.role);
+  ["ADMIN", "COMMUNITY_HEAD", "BLOCK_MANAGER"].includes(user.role);
 
 const isBusinessOwner = (business, user) =>
   business.owner.toString() === user._id.toString();
@@ -117,8 +117,14 @@ const updateBusiness = async (req, res) => {
         message: "Business not found"
       });
     }
+    if (!canManageBusiness(business, req.user)) {
+      return res.status(403).json({ success: false, message: "You are not authorized to update this business" });
+    }
 
-    const updateData = { ...req.body };
+    const updateData = {};
+    ["businessName", "category", "description", "services", "contact", "timings"].forEach((field) => {
+      if (req.body[field] !== undefined) updateData[field] = req.body[field];
+    });
     if (typeof updateData.services === "string") {
       updateData.services = JSON.parse(updateData.services);
     }
@@ -246,11 +252,14 @@ const resumeBusiness = async (req, res) => {
 // CLOSE BUSINESS
 const closeBusiness = async (req, res) => {
   try {
-    const business = await Business.findByIdAndUpdate(
-      req.params.id,
-      { status: "CLOSED" },
-      { new: true }
-    );
+    const existingBusiness = await Business.findById(req.params.id);
+    if (!existingBusiness) return res.status(404).json({ success: false, message: "Business not found" });
+    if (!canManageBusiness(existingBusiness, req.user)) {
+      return res.status(403).json({ success: false, message: "You are not authorized to close this business" });
+    }
+    existingBusiness.status = "CLOSED";
+    await existingBusiness.save();
+    const business = existingBusiness;
 
     res.status(200).json({
       success: true,
@@ -276,6 +285,9 @@ const addReview = async (req, res) => {
     const business = await Business.findById(req.params.id);
     if (!business) {
       return res.status(404).json({ success: false, message: "Business not found" });
+    }
+    if (business.reviews.some((review) => review.author.toString() === req.user._id.toString())) {
+      return res.status(409).json({ success: false, message: "You have already reviewed this business" });
     }
 
     business.reviews.push({ author: req.user._id, rating: Number(rating), comment });

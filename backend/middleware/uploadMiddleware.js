@@ -29,4 +29,18 @@ const upload = multer({
   }
 });
 
+const recordsUpload = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowed = ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"];
+    if ((file.mimetype && file.mimetype.startsWith("image/")) || allowed.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only PDF, DOC, DOCX and image files are allowed"));
+    }
+  }
+});
+
 module.exports = upload;
+module.exports.records = recordsUpload;

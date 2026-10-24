@@ -16,6 +16,7 @@ const BlockManagerDashboard = () => {
   const [blockComplaints, setBlockComplaints] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedComplaint, setSelectedComplaint] = useState(null);
+  const [approvingUserId, setApprovingUserId] = useState(null);
 
   // Add User Modal State
   const [showAddUserModal, setShowAddUserModal] = useState(false);
@@ -69,6 +70,18 @@ const BlockManagerDashboard = () => {
     if (window.confirm(`Are you sure you want to delete resident "${name}"?`)) {
       await metaService.deleteUser(id);
       fetchData();
+    }
+  };
+
+  const handleApproveUser = async (id) => {
+    setApprovingUserId(id);
+    try {
+      await metaService.approveUser(id);
+      await fetchData();
+    } catch (err) {
+      alert(err.response?.data?.message || err.message || 'Failed to approve resident');
+    } finally {
+      setApprovingUserId(null);
     }
   };
 
@@ -163,13 +176,24 @@ const BlockManagerDashboard = () => {
                   </div>
                 </div>
 
-                <button
-                  onClick={() => handleDeleteUser(res._id, res.name)}
-                  title="Delete Resident User"
-                  className="p-2 text-[#542612]/60 hover:text-[#542612] hover:bg-[#F7F0DF] dark:hover:bg-[#542612]/40 rounded-xl transition-colors shrink-0 ml-2"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                <div className="flex items-center gap-1 shrink-0 ml-2">
+                  {!res.isApproved && res.role === 'USER' && (
+                    <button
+                      onClick={() => handleApproveUser(res._id)}
+                      disabled={approvingUserId === res._id}
+                      className="px-2 py-1.5 rounded-lg bg-emerald-700 text-white text-[10px] font-bold disabled:opacity-60"
+                    >
+                      {approvingUserId === res._id ? '...' : 'Approve'}
+                    </button>
+                  )}
+                  <button
+                    onClick={() => handleDeleteUser(res._id, res.name)}
+                    title="Delete Resident User"
+                    className="p-2 text-[#542612]/60 hover:text-[#542612] hover:bg-[#F7F0DF] dark:hover:bg-[#542612]/40 rounded-xl transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
               </motion.div>
             ))}
           </div>

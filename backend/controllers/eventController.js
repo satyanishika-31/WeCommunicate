@@ -1,4 +1,6 @@
 const Event = require("../models/Event");
+const User = require("../models/User");
+const createNotifications = require("../utils/createNotification");
 
 
 // CREATE EVENT
@@ -25,6 +27,14 @@ const createEvent = async (req, res) => {
       venue,
       community: req.user.community || null,
       block: block || req.user.block || null
+    });
+    const recipients = await User.find({ community: req.user.community }, "_id");
+    await createNotifications({
+      recipients: recipients.map((user) => user._id),
+      type: "EVENT",
+      title: "New community event",
+      message: event.title,
+      relatedId: event._id
     });
 
     res.status(201).json({
@@ -108,14 +118,7 @@ const getEventById = async (req, res) => {
 // UPDATE EVENT
 const updateEvent = async (req, res) => {
   try {
-    const event = await Event.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      {
-        new: true,
-        runValidators: true
-      }
-    );
+    const event = await Event.findById(req.params.id);
 
     if (!event) {
       return res.status(404).json({
@@ -123,6 +126,16 @@ const updateEvent = async (req, res) => {
         message: "Event not found"
       });
     }
+    if (event.createdBy.toString() !== req.user._id.toString() &&
+      req.user.role !== "ADMIN" &&
+      (req.user.role !== "COMMUNITY_HEAD" || event.community !== req.user.community)) {
+      return res.status(403).json({ success: false, message: "You are not authorized to update this event" });
+    }
+    ["title", "description", "date", "time", "venue", "block"].forEach((field) => {
+      if (req.body[field] !== undefined) event[field] = req.body[field];
+    });
+    if (req.file) event.poster = `/uploads/${req.file.filename}`;
+    await event.save();
 
     res.status(200).json({
       success: true,
@@ -149,6 +162,11 @@ const deleteEvent = async (req, res) => {
         success: false,
         message: "Event not found"
       });
+    }
+    if (event.createdBy.toString() !== req.user._id.toString() &&
+      req.user.role !== "ADMIN" &&
+      (req.user.role !== "COMMUNITY_HEAD" || event.community !== req.user.community)) {
+      return res.status(403).json({ success: false, message: "You are not authorized to delete this event" });
     }
 
     await event.deleteOne();

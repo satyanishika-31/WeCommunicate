@@ -30,7 +30,7 @@ import BusinessCard from '../components/businesses/BusinessCard';
 import EventCard from '../components/events/EventCard';
 import EmptyState from '../components/common/EmptyState';
 import { useAuth } from '../context/AuthContext';
-import { postService, complaintService, businessService, eventService, metaService } from '../api/services';
+import { postService, complaintService, businessService, eventService } from '../api/services';
 import useEventPolling from '../hooks/useEventPolling';
 
 const Profile = () => {
@@ -48,7 +48,6 @@ const Profile = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState('');
-  const [communitiesList, setCommunitiesList] = useState([]);
 
   const [editFormData, setEditFormData] = useState({
     name: '',
@@ -70,27 +69,13 @@ const Profile = () => {
     }
   }, [user]);
 
-  useEffect(() => {
-    const fetchComms = async () => {
-      try {
-        const comms = await metaService.getCommunities();
-        if (comms && comms.length > 0) {
-          setCommunitiesList(comms.map((c) => c.name));
-        }
-      } catch (err) {
-        console.error('Failed to load communities for edit profile modal:', err);
-      }
-    };
-    fetchComms();
-  }, []);
-
   const handleOpenEditModal = () => {
     setEditError('');
     setEditFormData({
       name: user?.name || '',
       phone: user?.phone || '',
       houseNumber: user?.houseNumber || user?.house?.houseNumber || '',
-      community: user?.community || (communitiesList[0] || ''),
+      community: user?.community || '',
       residentType: user?.residentType || 'OWNER',
     });
     setIsEditModalOpen(true);
@@ -283,7 +268,7 @@ const Profile = () => {
                 <p className="text-xs sm:text-sm font-semibold text-[#542612]/75 dark:text-[#F7F0DF]/80 mt-1 flex items-center justify-center sm:justify-start gap-1.5">
                   <MapPin className="w-4 h-4 text-[#542612] dark:text-[#F7F0DF]" />
                   <span>
-                    Flat {user?.houseNumber || user?.house?.houseNumber || 'A-101'}
+                    Flat {user?.flatNumber || user?.houseNumber || user?.house?.houseNumber || 'N/A'}
                     {user?.block?.name ? ` • ${user.block.name}` : ''}
                     {user?.community ? ` • ${user.community}` : ''}
                   </span>
@@ -519,32 +504,20 @@ const Profile = () => {
               </div>
             </div>
 
-            {/* Community Selection */}
+            {/* Community (assigned by registration/management) */}
             <div>
               <label className="block font-bold text-[#542612] dark:text-[#F7F0DF] uppercase tracking-wider text-[10px] mb-1.5">
                 Community / Society
               </label>
-              {communitiesList.length > 0 ? (
-                <select
-                  value={editFormData.community}
-                  onChange={(e) => setEditFormData({ ...editFormData, community: e.target.value })}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-black/30 border border-[#542612]/20 dark:border-white/20 text-[#542612] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#542612]"
-                >
-                  {communitiesList.map((c) => (
-                    <option key={c} value={c} className="bg-white dark:bg-zinc-900 text-[#542612] dark:text-white">
-                      {c}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <input
-                  type="text"
-                  value={editFormData.community}
-                  onChange={(e) => setEditFormData({ ...editFormData, community: e.target.value })}
-                  placeholder="Society name"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-black/30 border border-[#542612]/20 dark:border-white/20 text-[#542612] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#542612]"
-                />
-              )}
+              <input
+                type="text"
+                value={editFormData.community}
+                readOnly
+                className="w-full px-3.5 py-2.5 rounded-xl bg-[#E5D3AF]/40 dark:bg-black/30 border border-[#542612]/20 dark:border-white/20 text-[#542612]/70 dark:text-white/70 cursor-not-allowed"
+              />
+              <p className="mt-1 text-[10px] text-[#542612]/60 dark:text-white/60">
+                Community changes must be made by a community administrator.
+              </p>
             </div>
 
             {/* Action buttons */}
