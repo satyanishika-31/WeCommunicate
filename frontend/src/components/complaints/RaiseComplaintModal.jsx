@@ -25,9 +25,11 @@ const intakeRoutes = [
 
 const RaiseComplaintModal = ({ isOpen, onClose, onCreated }) => {
   const { user } = useAuth();
+  const [loading, setLoading] = useState(false);
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('WATER');
   const [description, setDescription] = useState('');
+  const [intakeRoute, setIntakeRoute] = useState('RESIDENT_APP');
   const [flatNumber, setFlatNumber] = useState(user?.flatNumber || user?.houseNumber || user?.house?.houseNumber || '');
 
   const handleSubmit = async (e) => {
@@ -35,17 +37,20 @@ const RaiseComplaintModal = ({ isOpen, onClose, onCreated }) => {
     if (!title.trim() || !description.trim()) return;
 
     setLoading(true);
-    const res = await complaintService.create(
-      { title, category, description, intakeRoute, flatNumber },
-      user
-    );
-    setLoading(false);
+    try {
+      const res = await complaintService.create(
+        { title, category, description, intakeRoute, flatNumber },
+        user
+      );
 
-    if (res.success && res.complaint) {
-      if (onCreated) onCreated(res.complaint);
-      onClose();
-      setTitle('');
-      setDescription('');
+      if (res.success && res.complaint) {
+        if (onCreated) onCreated(res.complaint);
+        onClose();
+        setTitle('');
+        setDescription('');
+      }
+    } finally {
+      setLoading(false);
     }
   };
 

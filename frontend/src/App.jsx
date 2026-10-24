@@ -1,6 +1,6 @@
 import React, { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationContext';
 import ProtectedRoute from './components/common/ProtectedRoute';
 
@@ -22,6 +22,12 @@ const Settings = lazy(() => import('./pages/Settings'));
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
 const BlockManagerDashboard = lazy(() => import('./pages/manager/BlockManagerDashboard'));
 
+function RootRoute() {
+  const { isAuthenticated } = useAuth();
+
+  return isAuthenticated ? <Navigate to="/home" replace /> : <Landing />;
+}
+
 function App() {
   return (
     <AuthProvider>
@@ -30,7 +36,7 @@ function App() {
           <Suspense fallback={<div className="min-h-screen bg-[#F7F0DF]" />}>
             <Routes>
               {/* Public Routes */}
-              <Route path="/" element={<Landing />} />
+              <Route path="/" element={<RootRoute />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
 
