@@ -46,11 +46,12 @@ const Complaints = () => {
     if (filterTab === 'MY' && c.raisedBy?._id !== user?._id) return false;
     if (filterTab !== 'ALL' && filterTab !== 'MY' && c.status !== filterTab) return false;
 
+    const q = searchQuery?.toLowerCase().trim();
     return (
-      !searchQuery ||
-      c.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.category.toLowerCase().includes(searchQuery.toLowerCase())
+      !q ||
+      c.title?.toLowerCase().includes(q) ||
+      c.description?.toLowerCase().includes(q) ||
+      c.category?.toLowerCase().includes(q)
     );
   });
 

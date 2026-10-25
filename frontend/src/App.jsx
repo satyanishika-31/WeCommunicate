@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationContext';
 import ProtectedRoute from './components/common/ProtectedRoute';
+import ErrorBoundary from './components/common/ErrorBoundary';
 
 const Landing = lazy(() => import('./pages/Landing'));
 const Login = lazy(() => import('./pages/Login'));
@@ -30,40 +31,42 @@ function RootRoute() {
 
 function App() {
   return (
-    <AuthProvider>
-      <NotificationProvider>
-        <BrowserRouter>
-          <Suspense fallback={<div className="min-h-screen bg-[#F7F0DF]" />}>
-            <Routes>
-              {/* Public Routes */}
-              <Route path="/" element={<RootRoute />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
+    <ErrorBoundary>
+      <AuthProvider>
+        <NotificationProvider>
+          <BrowserRouter>
+            <Suspense fallback={<div className="min-h-screen bg-[#F7F0DF]" />}>
+              <Routes>
+                {/* Public Routes */}
+                <Route path="/" element={<RootRoute />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
 
-              {/* Main Application Pages */}
-              <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
-              <Route path="/explore" element={<ProtectedRoute><Explore /></ProtectedRoute>} />
-              <Route path="/notices" element={<ProtectedRoute><Notices /></ProtectedRoute>} />
-              <Route path="/records" element={<ProtectedRoute><Records /></ProtectedRoute>} />
-              <Route path="/events" element={<ProtectedRoute><Events /></ProtectedRoute>} />
-              <Route path="/complaints" element={<ProtectedRoute><Complaints /></ProtectedRoute>} />
-              <Route path="/businesses" element={<ProtectedRoute><Businesses /></ProtectedRoute>} />
-              <Route path="/create-post" element={<ProtectedRoute><CreatePost /></ProtectedRoute>} />
-              <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
-              <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-              <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+                {/* Main Application Pages */}
+                <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+                <Route path="/explore" element={<ProtectedRoute><Explore /></ProtectedRoute>} />
+                <Route path="/notices" element={<ProtectedRoute><Notices /></ProtectedRoute>} />
+                <Route path="/records" element={<ProtectedRoute><Records /></ProtectedRoute>} />
+                <Route path="/events" element={<ProtectedRoute><Events /></ProtectedRoute>} />
+                <Route path="/complaints" element={<ProtectedRoute><Complaints /></ProtectedRoute>} />
+                <Route path="/businesses" element={<ProtectedRoute><Businesses /></ProtectedRoute>} />
+                <Route path="/create-post" element={<ProtectedRoute><CreatePost /></ProtectedRoute>} />
+                <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
+                <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+                <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
 
-              {/* Governance Dashboards */}
-              <Route path="/admin/*" element={<ProtectedRoute allowedRoles={['ADMIN', 'COMMUNITY_HEAD']}><AdminDashboard /></ProtectedRoute>} />
-              <Route path="/manager/*" element={<ProtectedRoute allowedRoles={['ADMIN', 'BLOCK_MANAGER']}><BlockManagerDashboard /></ProtectedRoute>} />
+                {/* Governance Dashboards */}
+                <Route path="/admin/*" element={<ProtectedRoute allowedRoles={['ADMIN', 'COMMUNITY_HEAD']}><AdminDashboard /></ProtectedRoute>} />
+                <Route path="/manager/*" element={<ProtectedRoute allowedRoles={['ADMIN', 'BLOCK_MANAGER']}><BlockManagerDashboard /></ProtectedRoute>} />
 
-              {/* Fallback */}
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </Suspense>
-        </BrowserRouter>
-      </NotificationProvider>
-    </AuthProvider>
+                {/* Fallback */}
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </Suspense>
+          </BrowserRouter>
+        </NotificationProvider>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
 

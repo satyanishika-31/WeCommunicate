@@ -39,15 +39,29 @@ const Home = () => {
 
   const fetchData = async () => {
     setLoading(true);
-    const [pList, eList, bList] = await Promise.all([
-      postService.getAll(),
-      eventService.getAll(),
-      businessService.getAll(),
-    ]);
-    setPosts(pList || []);
-    setEvents(eList || []);
-    setBusinesses(bList || []);
-    setLoading(false);
+    try {
+      const [pList, eList, bList] = await Promise.all([
+        postService.getAll().catch((err) => {
+          console.error('Failed to fetch posts:', err);
+          return [];
+        }),
+        eventService.getAll().catch((err) => {
+          console.error('Failed to fetch events:', err);
+          return [];
+        }),
+        businessService.getAll().catch((err) => {
+          console.error('Failed to fetch businesses:', err);
+          return [];
+        }),
+      ]);
+      setPosts(pList || []);
+      setEvents(eList || []);
+      setBusinesses(bList || []);
+    } catch (err) {
+      console.error('Unexpected error in Home fetchData:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -70,11 +84,12 @@ const Home = () => {
       post.type === activeCategory ||
       (activeCategory === 'COMPLAINT' && post.type === 'NOTICE');
 
+    const q = searchQuery?.toLowerCase().trim();
     const matchesSearch =
-      !searchQuery ||
-      post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      post.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      post.author?.name.toLowerCase().includes(searchQuery.toLowerCase());
+      !q ||
+      post.title?.toLowerCase().includes(q) ||
+      post.description?.toLowerCase().includes(q) ||
+      post.author?.name?.toLowerCase().includes(q);
 
     return matchesCategory && matchesSearch;
   });

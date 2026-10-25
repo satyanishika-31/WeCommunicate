@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Upload, Wrench } from 'lucide-react';
 import Modal from '../common/Modal';
 import Button from '../common/Button';
@@ -32,6 +32,13 @@ const RaiseComplaintModal = ({ isOpen, onClose, onCreated }) => {
   const [intakeRoute, setIntakeRoute] = useState('RESIDENT_APP');
   const [flatNumber, setFlatNumber] = useState(user?.flatNumber || user?.houseNumber || user?.house?.houseNumber || '');
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (isOpen) {
+      setFlatNumber(user?.flatNumber || user?.houseNumber || user?.house?.houseNumber || '');
+      setError('');
+    }
+  }, [isOpen, user]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
