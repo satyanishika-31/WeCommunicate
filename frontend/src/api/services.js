@@ -97,6 +97,7 @@ export const metaService = {
   getHouses: async (query = '') => (await data(API.get(`/houses${query}`))).houses || [],
   getUsers: async (query = '') => (await data(API.get(`/users${query}`))).users || [],
   approveUser: (userId) => data(API.put(`/users/${userId}/approve`)),
+  rejectUser: (userId, reason) => data(API.put(`/users/${userId}/reject`, { reason })),
   addUser: (userData) => data(API.post('/auth/register', userData)),
   deleteUser: (userId) => data(API.delete(`/users/${userId}`)),
   updateUser: (userId, userData) => data(API.put(`/users/${userId}`, userData)),

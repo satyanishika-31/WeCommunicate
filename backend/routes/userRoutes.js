@@ -5,8 +5,9 @@ const {
   getUsers,
   getUserById,
   updateUser,
-  deleteUser
-  ,approveUser
+  deleteUser,
+  approveUser,
+  rejectUser
 } = require("../controllers/userController");
 
 const protect = require("../middleware/authMiddleware");
@@ -21,7 +22,8 @@ router.get(
   getUsers
 );
 
-router.put("/:id/approve", protect, authorize("ADMIN", "COMMUNITY_HEAD", "BLOCK_MANAGER"), approveUser);
+router.put("/:id/approve", protect, authorize("ADMIN", "COMMUNITY_HEAD"), approveUser);
+router.put("/:id/reject", protect, authorize("ADMIN", "COMMUNITY_HEAD"), rejectUser);
 
 // Get user by ID
 router.get(
@@ -41,7 +43,7 @@ router.put(
 router.delete(
   "/:id",
   protect,
-  authorize("ADMIN"),
+  authorize("ADMIN", "COMMUNITY_HEAD"),
   deleteUser
 );
 

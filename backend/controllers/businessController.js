@@ -40,6 +40,7 @@ const createBusiness = async (req, res) => {
 
     const business = await Business.create({
       owner: req.user._id,
+      community: req.user.community || req.body.community || undefined,
       businessName,
       category,
       description,
@@ -68,8 +69,23 @@ const createBusiness = async (req, res) => {
 // GET BUSINESSES
 const getBusinesses = async (req, res) => {
   try {
-    const businesses = await Business.find()
-      .populate("owner", "name profileImage block phone")
+    const userCommunity = (req.user?.community || "").trim();
+    let filter = {};
+    if (userCommunity) {
+      const escapedComm = userCommunity.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      filter.$or = [
+        { community: { $regex: new RegExp(`^${escapedComm}$`, 'i') } },
+        { community: "All Communities" },
+        { community: null },
+        { community: { $exists: false } }
+      ];
+    } else if (req.user?.role === "ADMIN" && req.query.community) {
+      const escapedComm = req.query.community.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      filter.community = { $regex: new RegExp(`^${escapedComm}$`, 'i') };
+    }
+
+    const businesses = await Business.find(filter)
+      .populate("owner", "name profileImage block phone community")
       .populate("approvedBy", "name")
       .sort({ createdAt: -1 });
 

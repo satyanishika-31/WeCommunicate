@@ -423,7 +423,7 @@ const Profile = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {userEvents.length === 0 ? (
               <div className="col-span-full">
-                <EmptyState title="No events joined" description="Browse upcoming events and click RSVP to attend!" />
+                <EmptyState title="No events joined" description="Browse upcoming events and click Join Now to attend!" />
               </div>
             ) : (
               userEvents.map((ev) => <EventCard key={ev._id} event={ev} onRSVPToggle={fetchData} />)

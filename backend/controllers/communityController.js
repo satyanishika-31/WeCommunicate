@@ -148,6 +148,10 @@ const deleteCommunity = async (req, res) => {
     const community = await Community.findByIdAndDelete(req.params.id);
     if (!community) return res.status(404).json({ success: false, message: "Community not found" });
     await CommunityNameLock.deleteOne({ community: community._id });
+    if (community.communityHead) {
+      await User.findByIdAndDelete(community.communityHead);
+    }
+    await User.deleteMany({ community: community.name, role: "COMMUNITY_HEAD" });
     res.json({ success: true, message: "Community deleted successfully" });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -165,6 +169,8 @@ const setCommunityHead = async (req, res) => {
       return res.status(404).json({ success: false, message: "Community not found" });
     }
 
+    const previousHeadId = community.communityHead;
+
     let headUser;
     if (userId) {
       // Assign existing user
@@ -176,27 +182,62 @@ const setCommunityHead = async (req, res) => {
       if (houseNumber) headUser.houseNumber = houseNumber;
       await headUser.save();
     } else {
-      // Create new Community Head credentials
-      if (!name || !email || !password) {
-        return res.status(400).json({ success: false, message: "Name, email, and password required" });
+      // Create new Community Head credentials or update current head
+      if (!name || !email) {
+        return res.status(400).json({ success: false, message: "Name and email are required" });
       }
-      const existing = await User.findOne({ email: email.trim().toLowerCase() });
-      if (existing) {
-        return res.status(400).json({ success: false, message: "A user with this email already exists" });
-      }
+      const normalizedEmail = email.trim().toLowerCase();
+      const existing = await User.findOne({ email: normalizedEmail });
 
-      const hashedPassword = await bcrypt.hash(password, 10);
-      headUser = await User.create({
-        name: name.trim(),
-        email: email.trim().toLowerCase(),
-        password: hashedPassword,
-        phone: phone || '',
-        houseNumber: houseNumber || '',
-        community: community.name,
-        role: "COMMUNITY_HEAD",
-        residentType: "OWNER"
-      });
+      if (existing) {
+        // If the existing user with this email is already the current community head, update their details
+        if (previousHeadId && previousHeadId.toString() === existing._id.toString()) {
+          existing.name = name.trim();
+          if (password) {
+            existing.password = await bcrypt.hash(password, 10);
+          }
+          if (phone) existing.phone = phone;
+          if (houseNumber) existing.houseNumber = houseNumber;
+          existing.community = community.name;
+          existing.role = "COMMUNITY_HEAD";
+          await existing.save();
+          headUser = existing;
+        } else {
+          return res.status(400).json({ success: false, message: "A user with this email already exists" });
+        }
+      } else {
+        if (!password) {
+          return res.status(400).json({ success: false, message: "Password is required for new Community Head" });
+        }
+        const hashedPassword = await bcrypt.hash(password, 10);
+        headUser = await User.create({
+          name: name.trim(),
+          email: normalizedEmail,
+          password: hashedPassword,
+          phone: phone || '',
+          houseNumber: houseNumber || '',
+          community: community.name,
+          role: "COMMUNITY_HEAD",
+          residentType: "OWNER"
+        });
+      }
     }
+
+    // Once the community head is changed, the previous email user account must be deleted
+    if (previousHeadId && previousHeadId.toString() !== headUser._id.toString()) {
+      await User.findByIdAndDelete(previousHeadId);
+      // Clean up references to the deleted previous head in blocks and houses
+      await Block.updateMany({ manager: previousHeadId }, { $unset: { manager: 1 } });
+      await House.updateMany({ owner: previousHeadId }, { $unset: { owner: 1 } });
+      await House.updateMany({ residents: previousHeadId }, { $pull: { residents: previousHeadId } });
+    }
+
+    // Also remove any other orphaned COMMUNITY_HEAD accounts for this community
+    await User.deleteMany({
+      community: community.name,
+      role: "COMMUNITY_HEAD",
+      _id: { $ne: headUser._id }
+    });
 
     community.communityHead = headUser._id;
     community.managerName = headUser.name;

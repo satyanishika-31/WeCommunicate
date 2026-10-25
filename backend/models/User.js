@@ -72,6 +72,16 @@ const userSchema = new mongoose.Schema(
     isApproved: {
       type: Boolean,
       default: true
+    },
+
+    isRejected: {
+      type: Boolean,
+      default: false
+    },
+
+    rejectionReason: {
+      type: String,
+      default: ""
     }
   },
   {

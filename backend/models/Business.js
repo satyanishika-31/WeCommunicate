@@ -8,6 +8,12 @@ const businessSchema = new mongoose.Schema(
       required: true
     },
 
+    community: {
+      type: String,
+      trim: true,
+      index: true
+    },
+
     businessName: {
       type: String,
       required: true,

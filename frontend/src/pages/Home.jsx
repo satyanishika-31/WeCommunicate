@@ -79,11 +79,6 @@ const Home = () => {
   };
 
   const filteredPosts = posts.filter((post) => {
-    const matchesCategory =
-      activeCategory === 'ALL' ||
-      post.type === activeCategory ||
-      (activeCategory === 'COMPLAINT' && post.type === 'NOTICE');
-
     const q = searchQuery?.toLowerCase().trim();
     const matchesSearch =
       !q ||
@@ -91,8 +86,51 @@ const Home = () => {
       post.description?.toLowerCase().includes(q) ||
       post.author?.name?.toLowerCase().includes(q);
 
-    return matchesCategory && matchesSearch;
+    if (!matchesSearch) return false;
+
+    if (activeCategory === 'ALL') return true;
+    if (activeCategory === 'NOTICE') return post.type === 'NOTICE';
+    if (activeCategory === 'GENERAL') return post.type === 'GENERAL';
+    if (activeCategory === 'COMPLAINT') return post.type === 'NOTICE' || post.isUrgent;
+    return false;
   });
+
+  const filteredEvents = events.filter((ev) => {
+    const q = searchQuery?.toLowerCase().trim();
+    return (
+      !q ||
+      ev.title?.toLowerCase().includes(q) ||
+      ev.description?.toLowerCase().includes(q) ||
+      ev.venue?.toLowerCase().includes(q)
+    );
+  });
+
+  const filteredBusinesses = businesses.filter((b) => {
+    const q = searchQuery?.toLowerCase().trim();
+    return (
+      !q ||
+      b.name?.toLowerCase().includes(q) ||
+      b.description?.toLowerCase().includes(q) ||
+      b.category?.toLowerCase().includes(q)
+    );
+  });
+
+  // When activeCategory === 'ALL', merge community posts and events chronologically
+  const allFeedItems = [
+    ...filteredPosts.map((p) => ({ ...p, feedItemType: 'POST' })),
+    ...filteredEvents.map((e) => ({ ...e, feedItemType: 'EVENT', createdAt: e.createdAt || e.date }))
+  ].sort((a, b) => {
+    if (a.isPinned && !b.isPinned) return -1;
+    if (!a.isPinned && b.isPinned) return 1;
+    return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+  });
+
+  const getDisplayCount = () => {
+    if (activeCategory === 'EVENT') return `${filteredEvents.length} Event${filteredEvents.length !== 1 ? 's' : ''}`;
+    if (activeCategory === 'BUSINESS') return `${filteredBusinesses.length} Service${filteredBusinesses.length !== 1 ? 's' : ''}`;
+    if (activeCategory === 'ALL') return `${allFeedItems.length} Update${allFeedItems.length !== 1 ? 's' : ''}`;
+    return `${filteredPosts.length} Post${filteredPosts.length !== 1 ? 's' : ''}`;
+  };
 
   const quickActions = [
     {
@@ -185,7 +223,7 @@ const Home = () => {
                 What's happening?
               </h2>
               <span className="text-xs font-bold text-[#542612]/70 dark:text-[#F7F0DF]/70">
-                {filteredPosts.length} Post{filteredPosts.length !== 1 ? 's' : ''}
+                {getDisplayCount()}
               </span>
             </div>
 
@@ -202,17 +240,115 @@ const Home = () => {
               <CardSkeleton />
               <CardSkeleton />
             </div>
+          ) : activeCategory === 'EVENT' ? (
+            filteredEvents.length === 0 ? (
+              <EmptyState
+                title="No community events scheduled"
+                description="Upcoming festive celebrations, meetings, and sports matches will appear here."
+                action={
+                  <button
+                    onClick={() => navigate('/events')}
+                    className="px-5 py-2.5 rounded-full bg-[#542612] text-white font-bold text-xs"
+                  >
+                    Host Community Event
+                  </button>
+                }
+              />
+            ) : (
+              <div className="space-y-5">
+                {filteredEvents.map((ev) => (
+                  <EventCard key={ev._id} event={ev} onRSVPToggle={fetchData} />
+                ))}
+              </div>
+            )
+          ) : activeCategory === 'BUSINESS' ? (
+            filteredBusinesses.length === 0 ? (
+              <EmptyState
+                title="No resident services listed yet"
+                description="Discover and support verified home businesses, tutors, and bakers in your society."
+                action={
+                  <button
+                    onClick={() => setOpenBusinessOpen(true)}
+                    className="px-5 py-2.5 rounded-full bg-[#542612] text-white font-bold text-xs"
+                  >
+                    + Open Resident Business
+                  </button>
+                }
+              />
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {filteredBusinesses.map((b) => (
+                  <BusinessCard
+                    key={b._id}
+                    business={b}
+                    onClick={() => navigate('/businesses')}
+                  />
+                ))}
+              </div>
+            )
+          ) : activeCategory === 'ALL' ? (
+            allFeedItems.length === 0 ? (
+              <EmptyState
+                title="No society updates yet"
+                description="Be the first resident to share an update, notice, or event with your neighbors!"
+                action={
+                  <button
+                    onClick={() => navigate('/create-post')}
+                    className="px-5 py-2.5 rounded-full bg-[#542612] text-white font-bold text-xs"
+                  >
+                    Create First Post
+                  </button>
+                }
+              />
+            ) : (
+              <div className="space-y-5">
+                {allFeedItems.map((item) =>
+                  item.feedItemType === 'EVENT' ? (
+                    <EventCard key={item._id} event={item} onRSVPToggle={fetchData} />
+                  ) : (
+                    <FeedCard
+                      key={item._id}
+                      post={item}
+                      onCommentAdded={fetchData}
+                      onPostDeleted={fetchData}
+                      onPostPinned={fetchData}
+                    />
+                  )
+                )}
+              </div>
+            )
           ) : filteredPosts.length === 0 ? (
             <EmptyState
-              title="No posts in this category yet"
-              description="Be the first resident to share an update, notice, or event with your society!"
+              title={
+                activeCategory === 'NOTICE'
+                  ? 'No official notices yet'
+                  : activeCategory === 'GENERAL'
+                  ? 'No community posts yet'
+                  : 'No maintenance notices or complaints'
+              }
+              description={
+                activeCategory === 'NOTICE'
+                  ? 'Official notices and society circulars from your management will appear here.'
+                  : activeCategory === 'GENERAL'
+                  ? 'Share an update, recommendation, or start a discussion with your neighbors.'
+                  : 'Have an issue or maintenance concern in your block?'
+              }
               action={
-                <button
-                  onClick={() => navigate('/create-post')}
-                  className="px-5 py-2.5 rounded-full bg-[#542612] text-white font-bold text-xs"
-                >
-                  Create First Post
-                </button>
+                activeCategory === 'COMPLAINT' ? (
+                  <button
+                    onClick={() => setRaiseComplaintOpen(true)}
+                    className="px-5 py-2.5 rounded-full bg-[#542612] text-white font-bold text-xs"
+                  >
+                    Raise Complaint
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => navigate('/create-post')}
+                    className="px-5 py-2.5 rounded-full bg-[#542612] text-white font-bold text-xs"
+                  >
+                    {activeCategory === 'NOTICE' ? 'Publish Notice' : 'Create Community Post'}
+                  </button>
+                )
               }
             />
           ) : (

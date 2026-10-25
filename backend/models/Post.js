@@ -65,6 +65,12 @@ const postSchema = new mongoose.Schema(
       ref: "Block"
     },
 
+    community: {
+      type: String,
+      trim: true,
+      index: true
+    },
+
     isPinned: {
       type: Boolean,
       default: false

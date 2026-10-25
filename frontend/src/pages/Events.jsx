@@ -134,7 +134,7 @@ const Events = () => {
           </div>
           <div>
             <h1 className="text-2xl lg:text-3xl font-extrabold text-[#542612] dark:text-white tracking-tight">
-              Community Events & RSVP
+              Community Events
             </h1>
             <p className="text-sm text-[#542612]/70 dark:text-[#542612]/60">
               Join festive celebrations, meetings, sports matches, and workshops

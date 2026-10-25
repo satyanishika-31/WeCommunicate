@@ -12,6 +12,7 @@ const createPost = async (req, res) => {
       description,
       image: imageUrl,
       block,
+      community: targetCommunity,
       isUrgent
     } = req.body;
     if (type === "NOTICE" && !["ADMIN", "COMMUNITY_HEAD", "BLOCK_MANAGER"].includes(req.user.role)) {
@@ -21,6 +22,28 @@ const createPost = async (req, res) => {
     const fileUrl = req.file ? (req.file.secure_url || req.file.url || req.file.path || `/uploads/${req.file.filename}`) : null;
     const image = fileUrl || (typeof imageUrl === "string" && imageUrl.trim() ? imageUrl.trim() : null);
 
+    // Resolve post community (enforces community isolation even if admin posts)
+    let community = (targetCommunity || req.user.community || "").trim();
+
+    if (!community && block) {
+      const Block = require("../models/Block");
+      const blockDoc = await Block.findById(block);
+      if (blockDoc?.community) community = blockDoc.community.trim();
+    }
+
+    if (!community && req.user.role === "ADMIN") {
+      const Community = require("../models/Community");
+      const defaultComm = await Community.findOne({}).sort({ createdAt: 1 });
+      if (defaultComm) community = defaultComm.name.trim();
+    }
+
+    if (!community) {
+      return res.status(400).json({
+        success: false,
+        message: "A target community is required to publish this post."
+      });
+    }
+
     const post = await Post.create({
       author: req.user._id,
       type,
@@ -28,11 +51,12 @@ const createPost = async (req, res) => {
       description,
       image,
       block,
+      community,
       isUrgent: isUrgent === true || isUrgent === 'true'
     });
     if (post.type === "NOTICE") {
       const recipients = await User.find(
-        block ? { block } : { community: req.user.community },
+        block ? { block } : { community: post.community },
         "_id"
       );
       await createNotifications({
@@ -43,7 +67,7 @@ const createPost = async (req, res) => {
         relatedId: post._id
       });
     } else if (post.type === "EVENT") {
-      const recipients = await User.find({ community: req.user.community }, "_id");
+      const recipients = await User.find({ community: post.community }, "_id");
       await createNotifications({
         recipients: recipients.map((user) => user._id),
         type: "EVENT",
@@ -107,12 +131,28 @@ const getPosts = async (req, res) => {
   try {
     let filter = {};
     if (req.query.type) filter.type = req.query.type;
+
+    // Isolate by community so residents and managers see posts of their own community, community-wide, or legacy posts
+    const userCommunity = (req.user?.community || "").trim();
+    if (userCommunity) {
+      const escapedComm = userCommunity.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      filter.$or = [
+        { community: { $regex: new RegExp(`^${escapedComm}$`, 'i') } },
+        { community: "All Communities" },
+        { community: null },
+        { community: { $exists: false } }
+      ];
+    } else if (req.user?.role === "ADMIN" && req.query.community) {
+      const escapedComm = req.query.community.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      filter.community = { $regex: new RegExp(`^${escapedComm}$`, 'i') };
+    }
+
     if (req.query.block) {
       filter.$or = [{ block: req.query.block }, { block: null }, { block: { $exists: false } }];
     }
 
     const posts = await Post.find(filter)
-      .populate("author", "name profileImage")
+      .populate("author", "name profileImage community role")
       .populate("block", "name blockNumber")
       .populate("comments.user", "name profileImage")
       .sort({ isPinned: -1, createdAt: -1 });
@@ -153,6 +193,16 @@ const getPostById = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: "Post not found"
+      });
+    }
+
+    // Community access boundary:
+    const userCommunity = (req.user?.community || "").trim().toLowerCase();
+    const postCommunity = (post.community || "").trim().toLowerCase();
+    if (userCommunity && postCommunity && userCommunity !== postCommunity && req.user.role !== "ADMIN") {
+      return res.status(403).json({
+        success: false,
+        message: "This post belongs to another community and cannot be accessed."
       });
     }
     if (post.author.toString() !== req.user._id.toString() &&

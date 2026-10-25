@@ -18,10 +18,18 @@ const createEvent = async (req, res) => {
       date,
       time,
       venue,
-      block
+      block,
+      community: targetCommunity
     } = req.body;
 
     const poster = getFileUrl(req) || req.body.poster || req.body.image || null;
+
+    let community = (targetCommunity || req.user.community || "").trim();
+    if (!community && req.user.role === "ADMIN") {
+      const Community = require("../models/Community");
+      const firstComm = await Community.findOne({}).sort({ createdAt: 1 });
+      if (firstComm) community = firstComm.name.trim();
+    }
 
     const event = await Event.create({
       createdBy: req.user._id,
@@ -31,10 +39,10 @@ const createEvent = async (req, res) => {
       date,
       time,
       venue,
-      community: req.user.community || null,
+      community: community || null,
       block: block || req.user.block || null
     });
-    const recipients = await User.find({ community: req.user.community }, "_id");
+    const recipients = await User.find({ community: event.community }, "_id");
     await createNotifications({
       recipients: recipients.map((user) => user._id),
       type: "EVENT",
@@ -61,15 +69,22 @@ const createEvent = async (req, res) => {
 // GET EVENTS
 const getEvents = async (req, res) => {
   try {
-    const communityFilter = req.user.community
-      ? {
-          $or: [
-            { community: req.user.community },
-            { community: { $exists: false } },
-            { community: null }
-          ]
-        }
-      : {};
+    const userCommunity = (req.user?.community || "").trim();
+    let communityFilter = {};
+    if (userCommunity) {
+      const escapedComm = userCommunity.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      communityFilter = {
+        $or: [
+          { community: { $regex: new RegExp(`^${escapedComm}$`, 'i') } },
+          { community: "All Communities" },
+          { community: null },
+          { community: { $exists: false } }
+        ]
+      };
+    } else if (req.user.role === "ADMIN" && req.query.community) {
+      const escapedComm = req.query.community.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      communityFilter = { community: { $regex: new RegExp(`^${escapedComm}$`, 'i') } };
+    }
 
     const events = await Event.find(communityFilter)
       .populate("createdBy", "name")

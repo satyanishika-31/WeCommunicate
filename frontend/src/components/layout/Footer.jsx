@@ -51,7 +51,7 @@ const Footer = () => {
             </li>
             <li>
               <Link to="/events" className="hover:text-[#F7F0DF] transition-colors flex items-center gap-1">
-                Festive Events & AGM RSVP <ArrowUpRight className="w-3 h-3 opacity-60" />
+                Festive Events & Gatherings <ArrowUpRight className="w-3 h-3 opacity-60" />
               </Link>
             </li>
             <li>

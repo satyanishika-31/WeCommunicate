@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Building2, Users, Wrench, Plus, Trash2, X, UserPlus, Phone, Mail } from 'lucide-react';
+import { Building2, Users, Wrench, Plus, Trash2, X, UserPlus, Phone, Mail, Clock } from 'lucide-react';
 import PageContainer from '../../components/layout/PageContainer';
 import Header from '../../components/layout/Header';
 import Avatar from '../../components/common/Avatar';
@@ -177,15 +177,23 @@ const BlockManagerDashboard = () => {
                 </div>
 
                 <div className="flex items-center gap-1 shrink-0 ml-2">
-                  {!res.isApproved && res.role === 'USER' && (
-                    <button
-                      onClick={() => handleApproveUser(res._id)}
-                      disabled={approvingUserId === res._id}
-                      className="px-2 py-1.5 rounded-lg bg-emerald-700 text-white text-[10px] font-bold disabled:opacity-60"
+                  {res.isRejected ? (
+                    <span
+                      title="Application rejected by Community Head"
+                      className="px-2 py-1 rounded-lg bg-red-100 text-red-800 text-[10px] font-bold border border-red-300 flex items-center gap-1"
                     >
-                      {approvingUserId === res._id ? '...' : 'Approve'}
-                    </button>
-                  )}
+                      <X className="w-3 h-3 text-red-600" />
+                      Rejected
+                    </span>
+                  ) : !res.isApproved && res.role === 'USER' ? (
+                    <span
+                      title="Pending Community Head approval"
+                      className="px-2 py-1 rounded-lg bg-amber-100 text-amber-800 text-[10px] font-bold border border-amber-300 flex items-center gap-1"
+                    >
+                      <Clock className="w-3 h-3 text-amber-600" />
+                      Pending Head Approval
+                    </span>
+                  ) : null}
                   <button
                     onClick={() => handleDeleteUser(res._id, res.name)}
                     title="Delete Resident User"

@@ -56,13 +56,53 @@ const register = async (req, res) => {
       });
       linkedBlock = blockRecord?._id;
     }
+
+    const flatSuffix = (houseNumber && typeof houseNumber === "string" && houseNumber.includes('-'))
+      ? houseNumber.split('-').pop().trim()
+      : (houseNumber || '').trim();
+
+    // Enforcement: Only 1 Owner allowed per flat (unless previous registration was rejected by Community Head)
+    if (residentType === "OWNER" && houseNumber) {
+      const flatCandidates = [houseNumber, flatSuffix].filter(Boolean);
+      const flatOwnerQuery = {
+        community,
+        residentType: "OWNER",
+        isRejected: { $ne: true },
+        $or: [
+          { houseNumber: { $in: flatCandidates } },
+          { flatNumber: { $in: flatCandidates } }
+        ]
+      };
+      if (linkedBlock) {
+        flatOwnerQuery.block = linkedBlock;
+      }
+
+      const existingOwner = await User.findOne(flatOwnerQuery);
+      if (existingOwner) {
+        if (existingOwner.isApproved) {
+          return res.status(400).json({
+            success: false,
+            message: `Flat ${flatSuffix || houseNumber} already has an active Owner account registered (${existingOwner.name}). A flat can only have one Owner account.`
+          });
+        } else {
+          return res.status(400).json({
+            success: false,
+            message: `An Owner registration for Flat ${flatSuffix || houseNumber} is already pending approval by the Community Head. A flat can only have one Owner account.`
+          });
+        }
+      }
+    }
+
     if (linkedBlock && houseNumber) {
-      linkedHouse = await House.findOne({ block: linkedBlock, houseNumber });
+      linkedHouse = await House.findOne({
+        block: linkedBlock,
+        $or: [{ houseNumber }, { flatNumber: houseNumber }, { flatNumber: flatSuffix }]
+      });
       if (!linkedHouse) {
         linkedHouse = await House.create({
           block: linkedBlock,
           houseNumber,
-          flatNumber: houseNumber,
+          flatNumber: flatSuffix || houseNumber,
           status: residentType === "TENANT" ? "TENANT_OCCUPIED" : "OWNER_OCCUPIED"
         });
       }
@@ -77,15 +117,44 @@ const register = async (req, res) => {
       residentType,
       community,
       houseNumber,
-      flatNumber: houseNumber,
+      flatNumber: flatSuffix || houseNumber,
       house: linkedHouse?._id || house,
       block: linkedHouse?.block || linkedBlock,
-      isApproved: false
+      isApproved: false,
+      isRejected: false
     });
     if (linkedHouse) {
       linkedHouse.residents.addToSet(user._id);
+      if (residentType === "OWNER" && !linkedHouse.owner) {
+        linkedHouse.owner = user._id;
+      }
       linkedHouse.status = residentType === "TENANT" ? "TENANT_OCCUPIED" : "OWNER_OCCUPIED";
       await linkedHouse.save();
+    }
+
+    // Notify Community Head of the pending tenant or owner registration
+    try {
+      if (community) {
+        const Community = require("../models/Community");
+        const commRecord = await Community.findOne({ name: community }).select("communityHead");
+        let headUserId = commRecord?.communityHead;
+        if (!headUserId) {
+          const headUser = await User.findOne({ role: "COMMUNITY_HEAD", community }, "_id");
+          headUserId = headUser?._id;
+        }
+        if (headUserId) {
+          const createNotifications = require("../utils/createNotification");
+          await createNotifications({
+            recipients: [headUserId],
+            type: "APPROVAL",
+            title: `New ${residentType === "TENANT" ? "Tenant" : "Owner"} Pending Approval`,
+            message: `${user.name} registered as a ${residentType === "TENANT" ? "tenant" : "homeowner"} in Flat ${user.flatNumber || user.houseNumber || 'Unit'}. Approval is required.`,
+            relatedId: user._id
+          });
+        }
+      }
+    } catch (notifErr) {
+      console.warn("Could not dispatch notification to Community Head:", notifErr.message);
     }
 
     const token = generateToken(user._id);
@@ -167,10 +236,16 @@ const login = async (req, res) => {
         message: "Invalid email or password"
       });
     }
+    if (user.isRejected) {
+      return res.status(403).json({
+        success: false,
+        message: `Your registration application was rejected by your Community Head.${user.rejectionReason ? ` Reason: ${user.rejectionReason}` : ''}`
+      });
+    }
     if (user.role === "USER" && user.isApproved === false) {
       return res.status(403).json({
         success: false,
-        message: "Your resident account is pending approval by a community manager."
+        message: `Your ${user.residentType === "TENANT" ? "tenant" : "homeowner"} account is pending approval by your Community Head.`
       });
     }
 

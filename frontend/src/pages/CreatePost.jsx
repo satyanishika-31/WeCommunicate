@@ -8,11 +8,13 @@ import {
   Sparkles,
   ArrowLeft,
   Check,
+  Building2,
 } from 'lucide-react';
 import PageContainer from '../components/layout/PageContainer';
 import Header from '../components/layout/Header';
 import Button from '../components/common/Button';
-import { postService } from '../api/services';
+import { postService, metaService } from '../api/services';
+import { useAuth } from '../context/AuthContext';
 
 const types = [
   { id: 'NOTICE', label: 'Official Notice', icon: Megaphone, desc: 'Water outage, maintenance, society updates' },
@@ -59,6 +61,9 @@ const compressImageFile = (file) => {
 const CreatePost = () => {
   const navigate = useNavigate();
 
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'ADMIN';
+
   const [type, setType] = useState('GENERAL');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -68,6 +73,8 @@ const CreatePost = () => {
   const [isUrgent, setIsUrgent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [submitError, setSubmitError] = useState('');
+  const [communities, setCommunities] = useState([]);
+  const [targetCommunity, setTargetCommunity] = useState(user?.community || '');
 
   // Sample stock photos for quick drag-drop demonstration
   const stockImages = [
@@ -76,6 +83,17 @@ const CreatePost = () => {
     'https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&q=80&w=800',
     'https://images.unsplash.com/photo-1552053831-71594a27632d?auto=format&fit=crop&q=80&w=800',
   ];
+
+  useEffect(() => {
+    if (isAdmin) {
+      metaService.getCommunities().then((list) => {
+        setCommunities(list || []);
+        if (!targetCommunity && list?.length > 0) {
+          setTargetCommunity(user?.community || list[0].name);
+        }
+      }).catch(() => {});
+    }
+  }, [isAdmin, targetCommunity, user?.community]);
 
   useEffect(() => {
     return () => {
@@ -117,6 +135,7 @@ const CreatePost = () => {
     setSubmitError('');
     try {
       let finalImage = imageUrl?.trim() || '';
+      const resolvedCommunity = (targetCommunity || user?.community || '').trim();
 
       if (imageFile) {
         try {
@@ -128,6 +147,7 @@ const CreatePost = () => {
           postData.append('title', title.trim());
           postData.append('description', description.trim());
           postData.append('isUrgent', type === 'NOTICE' ? String(isUrgent) : 'false');
+          postData.append('community', resolvedCommunity);
           postData.append('image', imageFile);
           const res = await postService.create(postData);
           if (res.success) {
@@ -144,6 +164,7 @@ const CreatePost = () => {
         title: title.trim(),
         description: description.trim(),
         isUrgent: type === 'NOTICE' ? isUrgent : false,
+        community: resolvedCommunity,
         ...(finalImage ? { image: finalImage } : {}),
       };
 
@@ -215,6 +236,38 @@ const CreatePost = () => {
               );
             })}
           </div>
+
+          {/* Target Community scope for Admin or Community badge */}
+          {isAdmin ? (
+            <div className="bg-[#F7F0DF] dark:bg-[#542612]/60 p-4 rounded-2xl border border-[#542612]/20">
+              <label className="block text-xs font-bold text-[#542612] dark:text-[#F7F0DF] uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                <Building2 className="w-4 h-4 text-[#542612]" />
+                Target Community (Who will access this post?)
+              </label>
+              <select
+                value={targetCommunity}
+                onChange={(e) => setTargetCommunity(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl bg-[#F5EFE1] dark:bg-[#542612] text-xs font-bold text-[#542612] dark:text-white border border-[#542612]/20 dark:border-[#F7F0DF]/30 focus:outline-none focus:ring-2 focus:ring-[#542612]"
+              >
+                {communities.map((c) => (
+                  <option key={c._id} value={c.name}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+              <p className="text-[11px] text-[#542612]/70 dark:text-[#F7F0DF]/70 mt-1">
+                This post will strictly be accessed only by residents belonging to this community.
+              </p>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-[#F7F0DF]/80 dark:bg-[#542612]/40 border border-[#542612]/10 text-xs font-semibold text-[#542612] dark:text-[#F7F0DF]">
+              <Building2 className="w-4 h-4 text-[#542612]" />
+              <span>
+                Publishing to your community:{' '}
+                <strong className="font-extrabold">{user?.community || 'Your Community'}</strong>
+              </span>
+            </div>
+          )}
 
           {/* Post Form */}
           <form onSubmit={handleSubmit} className="space-y-4">

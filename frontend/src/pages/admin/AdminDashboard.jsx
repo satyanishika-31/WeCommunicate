@@ -30,6 +30,7 @@ import {
   Home as HomeIcon,
   ChevronRight,
   ShieldAlert,
+  Clock,
 } from 'lucide-react';
 
 const AdminDashboard = () => {
@@ -74,7 +75,12 @@ const AdminDashboard = () => {
   const [selectedResidentId, setSelectedResidentId] = useState('');
   const [assigningLoading, setAssigningLoading] = useState(false);
   const [approvingUserId, setApprovingUserId] = useState(null);
+  const [rejectingUserId, setRejectingUserId] = useState(null);
   const [expandedBlockIds, setExpandedBlockIds] = useState({});
+
+  // Resident Filter & Search
+  const [residentFilter, setResidentFilter] = useState('ALL'); // ALL | PENDING | OWNER | TENANT
+  const [residentSearch, setResidentSearch] = useState('');
 
   const selectedCommunity = selectedCommunityDetail?.community;
   const headBlockOptions = selectedCommunity?.blocksList?.length
@@ -264,6 +270,29 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleRejectUser = async (id, name) => {
+    const reason = window.prompt(`Please provide a reason for rejecting resident "${name}" (optional):`);
+    if (reason === null) return;
+    setRejectingUserId(id);
+    try {
+      await metaService.rejectUser(id, reason);
+      await fetchData();
+      setSelectedCommunityDetail((current) => {
+        if (!current?.residents) return current;
+        return {
+          ...current,
+          residents: current.residents.map((resident) =>
+            resident._id === id ? { ...resident, isApproved: false, isRejected: true } : resident
+          ),
+        };
+      });
+    } catch (err) {
+      alert(err.response?.data?.message || err.message || 'Failed to reject resident');
+    } finally {
+      setRejectingUserId(null);
+    }
+  };
+
   const handleApproveBusiness = async (id, status) => {
     await businessService.updateStatus(id, status);
     fetchData();
@@ -308,7 +337,7 @@ const AdminDashboard = () => {
       <Header />
 
       <div className="space-y-6 font-sans">
-        {/* Admin Banner Header */}
+        {/* Banner Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-[#542612] via-[#63351E] to-[#542612] text-white p-6 lg:p-8 rounded-3xl shadow-xl border border-[#542612]/20">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-2xl bg-[#542612]/20 text-[#F7F0DF] border border-[#542612]/30 flex items-center justify-center">
@@ -316,28 +345,49 @@ const AdminDashboard = () => {
             </div>
             <div>
               <h1 className="text-2xl font-serif font-bold tracking-tight">
-                System Admin Portal — Communities & Governance
+                {isCommunityHead
+                  ? `Community Head Portal — ${currentUser?.community || 'Society Governance'}`
+                  : 'System Admin Portal — Communities & Governance'}
               </h1>
               <p className="text-xs text-[#F7F0DF]">
-                Logged in as <strong>configured administrator</strong> • Full authority over communities, residents, blocks, and approvals
+                {isCommunityHead
+                  ? 'Authority to review and approve new tenants & owners, manage blocks, and oversee society affairs'
+                  : 'Logged in as configured administrator • Full authority over communities, residents, blocks, and approvals'}
               </p>
             </div>
           </div>
 
-          <Badge type="ADMIN" size="md" />
+          <Badge type={currentUser?.role || 'ADMIN'} size="md" />
         </div>
 
         {/* Top Summary Metrics */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-[#F5EFE1] dark:bg-[#542612] p-5 rounded-2xl border border-[#542612]/15 shadow-xs">
-            <div className="flex items-center justify-between text-[#542612]/60 mb-2">
-              <span className="text-[11px] font-bold uppercase tracking-wider">Total Communities</span>
-              <Building2 className="w-4 h-4 text-[#542612]" />
+          {isCommunityHead ? (
+            <div className={`p-5 rounded-2xl border transition-all shadow-xs ${users.filter((u) => !u.isApproved && u.role === 'USER').length > 0 ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-300' : 'bg-[#F5EFE1] dark:bg-[#542612] border-[#542612]/15'}`}>
+              <div className="flex items-center justify-between text-[#542612]/60 dark:text-[#F7F0DF]/60 mb-2">
+                <span className="text-[11px] font-bold uppercase tracking-wider">Pending Approvals</span>
+                <Clock className={`w-4 h-4 ${users.filter((u) => !u.isApproved && u.role === 'USER').length > 0 ? 'text-amber-600' : 'text-[#542612]'}`} />
+              </div>
+              <div className="flex items-baseline gap-2">
+                <span className={`text-2xl font-extrabold font-serif ${users.filter((u) => !u.isApproved && u.role === 'USER').length > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-[#542612] dark:text-white'}`}>
+                  {users.filter((u) => !u.isApproved && u.role === 'USER').length}
+                </span>
+                {users.filter((u) => !u.isApproved && u.role === 'USER').length > 0 && (
+                  <span className="text-[10px] font-bold uppercase text-amber-600">Action Needed</span>
+                )}
+              </div>
             </div>
-            <div className="text-2xl font-extrabold text-[#542612] dark:text-white font-serif">
-              {communities.length}
+          ) : (
+            <div className="bg-[#F5EFE1] dark:bg-[#542612] p-5 rounded-2xl border border-[#542612]/15 shadow-xs">
+              <div className="flex items-center justify-between text-[#542612]/60 mb-2">
+                <span className="text-[11px] font-bold uppercase tracking-wider">Total Communities</span>
+                <Building2 className="w-4 h-4 text-[#542612]" />
+              </div>
+              <div className="text-2xl font-extrabold text-[#542612] dark:text-white font-serif">
+                {communities.length}
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="bg-[#F5EFE1] dark:bg-[#542612] p-5 rounded-2xl border border-[#542612]/15 shadow-xs">
             <div className="flex items-center justify-between text-[#542612]/60 mb-2">
@@ -351,11 +401,11 @@ const AdminDashboard = () => {
 
           <div className="bg-[#F5EFE1] dark:bg-[#542612] p-5 rounded-2xl border border-[#542612]/15 shadow-xs">
             <div className="flex items-center justify-between text-[#542612]/60 mb-2">
-              <span className="text-[11px] font-bold uppercase tracking-wider">Maintenance Issues</span>
-              <Wrench className="w-4 h-4 text-[#542612]" />
+              <span className="text-[11px] font-bold uppercase tracking-wider">{isCommunityHead ? 'Blocks & Towers' : 'Maintenance Issues'}</span>
+              {isCommunityHead ? <Building className="w-4 h-4 text-[#542612]" /> : <Wrench className="w-4 h-4 text-[#542612]" />}
             </div>
             <div className="text-2xl font-extrabold text-[#542612] dark:text-white font-serif">
-              {complaints.length}
+              {isCommunityHead ? blocks.length : complaints.length}
             </div>
           </div>
 
@@ -375,20 +425,31 @@ const AdminDashboard = () => {
           <div className="flex items-center gap-1 sm:gap-2">
             {[
               { id: 'COMMUNITIES', label: 'Communities Hub', count: communities.length, show: isAdmin },
-              { id: 'RESIDENTS', label: 'Residents', count: users.length, show: true },
+              {
+                id: 'RESIDENTS',
+                label: 'Residents & Approvals',
+                count: users.length,
+                pending: users.filter((u) => !u.isApproved && u.role === 'USER').length,
+                show: true
+              },
               { id: 'BLOCKS', label: 'Blocks & Towers', count: blocks.length, show: isCommunityHead },
               { id: 'BUSINESS_APPROVALS', label: 'Business Approvals', count: businesses.length, show: isAdmin },
             ].filter((t) => t.show).map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`px-4 py-3 text-xs sm:text-sm font-bold transition-all border-b-2 ${
+                className={`px-4 py-3 text-xs sm:text-sm font-bold transition-all border-b-2 flex items-center gap-1.5 ${
                   activeTab === tab.id
                     ? 'border-[#542612] text-[#542612] dark:text-[#F7F0DF]'
                     : 'border-transparent text-[#542612]/70 hover:text-[#542612] dark:hover:text-white'
                 }`}
               >
-                {tab.label} ({tab.count})
+                <span>{tab.label} ({tab.count})</span>
+                {tab.pending > 0 && (
+                  <span className="px-1.5 py-0.5 rounded-full bg-amber-600 text-white text-[10px] font-extrabold">
+                    {tab.pending}
+                  </span>
+                )}
               </button>
             ))}
           </div>
@@ -498,75 +559,207 @@ const AdminDashboard = () => {
           </div>
         )}
 
-        {/* TAB 2: RESIDENTS */}
-        {activeTab === 'RESIDENTS' && (
-          <div className="bg-[#F5EFE1] dark:bg-[#542612] rounded-3xl p-6 border border-[#542612]/15 dark:border-[#F7F0DF]/20 shadow-sm overflow-x-auto">
-            {users.some((user) => !user.isApproved && user.role === 'USER') && (
-              <div className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-xs text-amber-900">
-                <span className="font-bold">
-                  {users.filter((user) => !user.isApproved && user.role === 'USER').length} resident approval(s) pending
-                </span>
-                <span>Review the residents below and approve valid registrations.</span>
+        {/* TAB 2: RESIDENTS & APPROVALS */}
+        {activeTab === 'RESIDENTS' && (() => {
+          const pendingCount = users.filter((u) => !u.isApproved && u.role === 'USER').length;
+          const ownerCount = users.filter((u) => u.residentType === 'OWNER').length;
+          const tenantCount = users.filter((u) => u.residentType === 'TENANT').length;
+
+          const displayedUsers = users.filter((u) => {
+            if (residentFilter === 'PENDING' && (u.isApproved || u.role !== 'USER')) return false;
+            if (residentFilter === 'OWNER' && u.residentType !== 'OWNER') return false;
+            if (residentFilter === 'TENANT' && u.residentType !== 'TENANT') return false;
+
+            if (residentSearch.trim()) {
+              const q = residentSearch.toLowerCase();
+              const matchName = u.name?.toLowerCase().includes(q);
+              const matchEmail = u.email?.toLowerCase().includes(q);
+              const matchPhone = u.phone?.toLowerCase().includes(q);
+              const matchBlock = u.block?.name?.toLowerCase().includes(q);
+              const matchFlat = (u.flatNumber || u.houseNumber || u.house?.houseNumber || '')?.toString().toLowerCase().includes(q);
+              return matchName || matchEmail || matchPhone || matchBlock || matchFlat;
+            }
+            return true;
+          });
+
+          return (
+            <div className="bg-[#F5EFE1] dark:bg-[#542612] rounded-3xl p-6 border border-[#542612]/15 dark:border-[#F7F0DF]/20 shadow-sm space-y-4">
+              {/* Pending Approvals Notice Banner */}
+              {pendingCount > 0 && (
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-2xl border border-amber-300 bg-amber-50 dark:bg-amber-950/40 px-5 py-4 text-xs text-amber-950 dark:text-amber-200">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-amber-200/80 dark:bg-amber-900/60 flex items-center justify-center font-bold text-amber-900 dark:text-amber-200 shrink-0">
+                      <Clock className="w-5 h-5 text-amber-700 dark:text-amber-300" />
+                    </div>
+                    <div>
+                      <span className="font-extrabold text-sm block">
+                        {pendingCount} New {pendingCount === 1 ? 'Resident' : 'Residents'} Awaiting Community Head Approval
+                      </span>
+                      <span className="opacity-80">
+                        New homeowners and tenants in your community require approval before they can log in and access society services.
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setResidentFilter(residentFilter === 'PENDING' ? 'ALL' : 'PENDING')}
+                    className="px-3.5 py-1.5 rounded-xl bg-amber-700 hover:bg-amber-800 text-white font-bold text-xs transition-colors shrink-0 shadow-xs"
+                  >
+                    {residentFilter === 'PENDING' ? 'Show All Residents' : 'View Pending Approvals'}
+                  </button>
+                </div>
+              )}
+
+              {/* Filter pills & search */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+                  {[
+                    { id: 'ALL', label: 'All Residents', count: users.length },
+                    { id: 'PENDING', label: 'Pending Approval', count: pendingCount, highlight: pendingCount > 0 },
+                    { id: 'OWNER', label: 'Homeowners', count: ownerCount },
+                    { id: 'TENANT', label: 'Tenants', count: tenantCount },
+                  ].map((f) => (
+                    <button
+                      key={f.id}
+                      type="button"
+                      onClick={() => setResidentFilter(f.id)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 ${
+                        residentFilter === f.id
+                          ? 'bg-[#542612] text-white shadow-xs'
+                          : f.highlight
+                          ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-900 dark:text-amber-200 border border-amber-300'
+                          : 'bg-[#F7F0DF] dark:bg-[#542612]/60 text-[#542612] dark:text-[#F7F0DF] hover:bg-[#EDE2CB]'
+                      }`}
+                    >
+                      <span>{f.label}</span>
+                      <span className="text-[10px] opacity-80">({f.count})</span>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="relative min-w-[240px]">
+                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#542612]/50" />
+                  <input
+                    type="text"
+                    placeholder="Search by name, flat, email..."
+                    value={residentSearch}
+                    onChange={(e) => setResidentSearch(e.target.value)}
+                    className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-[#F7F0DF] dark:bg-[#542612] border border-[#542612]/20 dark:border-[#F7F0DF]/30 text-xs text-[#542612] dark:text-white placeholder:text-[#542612]/50 focus:outline-none focus:ring-2 focus:ring-[#542612]"
+                  />
+                </div>
               </div>
-            )}
-            <table className="w-full text-left text-xs">
-              <thead className="border-b border-[#542612]/15 dark:border-[#F7F0DF]/20 text-[#542612]/60 uppercase font-bold">
-                <tr>
-                  <th className="py-3 px-4">Resident Name</th>
-                  <th className="py-3 px-4">Email</th>
-                  <th className="py-3 px-4">Community</th>
-                  <th className="py-3 px-4">Block</th>
-                  <th className="py-3 px-4">Flat Unit</th>
-                  <th className="py-3 px-4">Role</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#F7F0DF] dark:divide-[#542612]">
-                {users.map((u) => (
-                  <tr key={u._id} className="hover:bg-[#F7F0DF] dark:hover:bg-[#542612]/40">
-                    <td className="py-3.5 px-4 font-bold text-[#542612] dark:text-white flex items-center gap-2">
-                      <Avatar src={u.profileImage} name={u.name} size="sm" />
-                      <span>{u.name}</span>
-                    </td>
-                    <td className="py-3.5 px-4 text-[#542612]/70">{u.email}</td>
-                    <td className="py-3.5 px-4 font-semibold text-[#542612] dark:text-[#F7F0DF]">
-                      {u.community || 'Emerald Towers Enclave'}
-                    </td>
-                    <td className="py-3.5 px-4 font-semibold text-[#542612]">
-                      {u.block?.name || '—'}
-                    </td>
-                    <td className="py-3.5 px-4 font-semibold text-[#542612]">
-                      {u.house?.houseNumber || 'A-101'}
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <Badge type={u.role} size="sm" />
-                    </td>
-                    <td className="py-3.5 px-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        {!u.isApproved && u.role === 'USER' && (
-                          <button
-                            onClick={() => handleApproveUser(u._id)}
-                            disabled={approvingUserId === u._id}
-                            className="px-2.5 py-1.5 rounded-lg bg-emerald-700 text-white text-[10px] font-bold disabled:opacity-60"
-                          >
-                            {approvingUserId === u._id ? 'Approving...' : 'Approve'}
-                          </button>
-                        )}
-                        <button
-                          onClick={() => handleDeleteUser(u._id, u.name)}
-                          className="p-1.5 text-[#542612]/60 hover:text-[#542612] hover:bg-[#F7F0DF] dark:hover:bg-[#542612]/40 rounded-lg transition-colors"
-                          title="Delete User"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+
+              {/* Table */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="border-b border-[#542612]/15 dark:border-[#F7F0DF]/20 text-[#542612]/60 uppercase font-bold">
+                    <tr>
+                      <th className="py-3 px-4">Resident Name</th>
+                      <th className="py-3 px-4">Resident Type</th>
+                      <th className="py-3 px-4">Contact</th>
+                      <th className="py-3 px-4">Community</th>
+                      <th className="py-3 px-4">Block</th>
+                      <th className="py-3 px-4">Flat Unit</th>
+                      <th className="py-3 px-4">Approval Status</th>
+                      <th className="py-3 px-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#F7F0DF] dark:divide-[#542612]">
+                    {displayedUsers.length === 0 ? (
+                      <tr>
+                        <td colSpan={8} className="py-8 text-center text-xs text-[#542612]/60">
+                          No residents found matching the selected filter.
+                        </td>
+                      </tr>
+                    ) : (
+                      displayedUsers.map((u) => (
+                        <tr key={u._id} className="hover:bg-[#F7F0DF] dark:hover:bg-[#542612]/40 transition-colors">
+                          <td className="py-3.5 px-4 font-bold text-[#542612] dark:text-white flex items-center gap-2">
+                            <Avatar src={u.profileImage} name={u.name} size="sm" />
+                            <div>
+                              <span className="block">{u.name}</span>
+                              <span className="text-[10px] text-[#542612]/60 font-normal">
+                                {u.role === 'USER' ? (u.residentType === 'TENANT' ? 'Tenant Resident' : 'Homeowner') : u.role}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <Badge
+                              type={u.residentType || (u.role === 'USER' ? 'OWNER' : u.role)}
+                              size="sm"
+                            />
+                          </td>
+                          <td className="py-3.5 px-4 text-[#542612]/70">
+                            <span className="block font-medium">{u.email}</span>
+                            {u.phone && <span className="text-[11px] opacity-75">{u.phone}</span>}
+                          </td>
+                          <td className="py-3.5 px-4 font-semibold text-[#542612] dark:text-[#F7F0DF]">
+                            {u.community || 'Emerald Towers Enclave'}
+                          </td>
+                          <td className="py-3.5 px-4 font-semibold text-[#542612]">
+                            {u.block?.name || u.block?.blockNumber || '—'}
+                          </td>
+                          <td className="py-3.5 px-4 font-semibold text-[#542612]">
+                            {u.flatNumber || u.houseNumber || u.house?.houseNumber || '—'}
+                          </td>
+                          <td className="py-3.5 px-4">
+                            {u.isRejected ? (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-red-100 text-red-900 border border-red-300 text-[10px] font-extrabold">
+                                <X className="w-3 h-3 text-red-700" />
+                                Rejected
+                              </span>
+                            ) : !u.isApproved && u.role === 'USER' ? (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-amber-100 text-amber-900 border border-amber-300 text-[10px] font-extrabold">
+                                <Clock className="w-3 h-3 text-amber-700" />
+                                Pending Head Approval
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] font-extrabold">
+                                <CheckCircle2 className="w-3 h-3 text-emerald-700" />
+                                Approved
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-3.5 px-4 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              {!u.isApproved && !u.isRejected && u.role === 'USER' && (
+                                <>
+                                  <button
+                                    onClick={() => handleApproveUser(u._id)}
+                                    disabled={approvingUserId === u._id}
+                                    className="px-3 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-extrabold shadow-xs transition-all disabled:opacity-60 flex items-center gap-1"
+                                    title="Approve this resident for society access"
+                                  >
+                                    {approvingUserId === u._id ? 'Approving...' : '✓ Approve'}
+                                  </button>
+                                  <button
+                                    onClick={() => handleRejectUser(u._id, u.name)}
+                                    disabled={rejectingUserId === u._id}
+                                    className="px-3 py-1.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-extrabold shadow-xs transition-all disabled:opacity-60 flex items-center gap-1"
+                                    title="Reject this resident application"
+                                  >
+                                    {rejectingUserId === u._id ? 'Rejecting...' : '✕ Reject'}
+                                  </button>
+                                </>
+                              )}
+                              <button
+                                onClick={() => handleDeleteUser(u._id, u.name)}
+                                className="p-1.5 text-[#542612]/60 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition-colors"
+                                title="Delete Resident"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* TAB 3: BLOCKS */}
         {activeTab === 'BLOCKS' && (
@@ -1064,15 +1257,25 @@ const AdminDashboard = () => {
                             {isCommunityHead && (
                               <td className="py-2 px-3">
                                 <div className="flex flex-wrap items-center gap-1">
-                                  {!r.isApproved && r.role === 'USER' && (
-                                    <button
-                                      type="button"
-                                      onClick={() => handleApproveUser(r._id)}
-                                      disabled={approvingUserId === r._id}
-                                      className="px-2 py-1 rounded-lg bg-emerald-700 text-white text-[10px] font-bold disabled:opacity-60"
-                                    >
-                                      {approvingUserId === r._id ? 'Approving...' : 'Approve'}
-                                    </button>
+                                  {!r.isApproved && !r.isRejected && r.role === 'USER' && (
+                                    <>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleApproveUser(r._id)}
+                                        disabled={approvingUserId === r._id}
+                                        className="px-2 py-1 rounded-lg bg-emerald-700 text-white text-[10px] font-bold disabled:opacity-60"
+                                      >
+                                        {approvingUserId === r._id ? 'Approving...' : 'Approve'}
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleRejectUser(r._id, r.name)}
+                                        disabled={rejectingUserId === r._id}
+                                        className="px-2 py-1 rounded-lg bg-red-600 text-white text-[10px] font-bold disabled:opacity-60"
+                                      >
+                                        {rejectingUserId === r._id ? 'Rejecting...' : 'Reject'}
+                                      </button>
+                                    </>
                                   )}
                                   {r.role === 'BLOCK_MANAGER' ? (
                                     <span className="text-[10px] font-bold text-emerald-700">

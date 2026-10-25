@@ -94,7 +94,7 @@ const EventCard = ({ event, onRSVPToggle }) => {
         </div>
       </div>
 
-      {/* RSVP Action */}
+      {/* Join Action */}
       <div className="p-5 pt-0">
         <Button
           onClick={handleRSVP}
@@ -105,10 +105,10 @@ const EventCard = ({ event, onRSVPToggle }) => {
           {isAttending ? (
             <span className="flex items-center gap-1.5 text-[#542612] dark:text-[#542612] font-bold">
               <CheckCircle2 className="w-4 h-4" />
-              RSVP'd (Attending)
+              Joined (Attending)
             </span>
           ) : (
-            'RSVP Now'
+            'Join Now'
           )}
         </Button>
       </div>

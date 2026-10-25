@@ -108,15 +108,63 @@ const getUserById = async (req, res) => {
 };
 
 const approveUser = async (req, res) => {
-  const user = await User.findById(req.params.id);
-  if (!user) return res.status(404).json({ success: false, message: "User not found" });
-  const sameBlock = req.user.block && user.block && user.block.toString() === req.user.block.toString();
-  if (req.user.role !== "ADMIN" && !sameBlock && !(req.user.role === "COMMUNITY_HEAD" && user.community === req.user.community)) {
-    return res.status(403).json({ success: false, message: "You are not authorized to approve this resident" });
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "Resident user not found" });
+    }
+
+    let isAuthorized = false;
+
+    if (req.user.role === "ADMIN") {
+      isAuthorized = true;
+    } else if (req.user.role === "COMMUNITY_HEAD") {
+      const userComm = (user.community || "").trim().toLowerCase();
+      const headComm = (req.user.community || "").trim().toLowerCase();
+
+      if (headComm && userComm && headComm === userComm) {
+        isAuthorized = true;
+      } else {
+        const Community = require("../models/Community");
+        const commRecord = await Community.findOne({ communityHead: req.user._id });
+        if (commRecord && commRecord.name.trim().toLowerCase() === userComm) {
+          isAuthorized = true;
+        }
+      }
+    }
+
+    if (!isAuthorized) {
+      return res.status(403).json({
+        success: false,
+        message: "New tenant or owner approval must be given by their Community Head."
+      });
+    }
+
+    user.isApproved = true;
+    await user.save();
+
+    // Notify the approved resident
+    try {
+      const createNotifications = require("../utils/createNotification");
+      await createNotifications({
+        recipients: [user._id],
+        type: "APPROVAL",
+        title: "Resident Account Approved",
+        message: `Your ${user.residentType === "TENANT" ? "tenant" : "homeowner"} account has been approved by your Community Head. You can now access all society services.`,
+        relatedId: user._id
+      });
+    } catch (notifErr) {
+      console.warn("Could not dispatch approval notification:", notifErr.message);
+    }
+
+    res.json({
+      success: true,
+      message: `${user.residentType === "TENANT" ? "Tenant" : "Homeowner"} approved successfully`,
+      user
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
-  user.isApproved = true;
-  await user.save();
-  res.json({ success: true, message: "Resident approved", user });
 };
 
 
@@ -196,6 +244,83 @@ const updateUser = async (req, res) => {
 };
 
 
+// REJECT RESIDENT (Admin or Community Head)
+const rejectUser = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    let isAuthorized = false;
+    if (req.user.role === "ADMIN") {
+      isAuthorized = true;
+    } else if (req.user.role === "COMMUNITY_HEAD") {
+      const userComm = (user.community || "").trim().toLowerCase();
+      const headComm = (req.user.community || "").trim().toLowerCase();
+      if (headComm && userComm && headComm === userComm) {
+        isAuthorized = true;
+      } else {
+        const Community = require("../models/Community");
+        const commRecord = await Community.findOne({ communityHead: req.user._id });
+        if (commRecord && commRecord.name.trim().toLowerCase() === userComm) {
+          isAuthorized = true;
+        }
+      }
+    }
+
+    if (!isAuthorized) {
+      return res.status(403).json({
+        success: false,
+        message: "Resident rejection must be done by their Community Head or Admin."
+      });
+    }
+
+    const { reason } = req.body || {};
+    user.isApproved = false;
+    user.isRejected = true;
+    user.rejectionReason = reason || "Application rejected by Community Head";
+    await user.save();
+
+    // Remove resident from House document so the flat is freed up
+    if (user.house) {
+      const house = await House.findById(user.house);
+      if (house) {
+        house.residents = house.residents.filter((r) => r.toString() !== user._id.toString());
+        if (house.owner && house.owner.toString() === user._id.toString()) {
+          house.owner = undefined;
+        }
+        if (house.residents.length === 0 && !house.owner) {
+          house.status = "VACANT";
+        }
+        await house.save();
+      }
+    }
+
+    // Notify resident
+    try {
+      const createNotifications = require("../utils/createNotification");
+      await createNotifications({
+        recipients: [user._id],
+        type: "APPROVAL",
+        title: "Resident Application Rejected",
+        message: `Your registration for Flat ${user.flatNumber || user.houseNumber} was rejected by your Community Head.${user.rejectionReason ? ` Reason: ${user.rejectionReason}` : ''}`,
+        relatedId: user._id
+      });
+    } catch (notifErr) {
+      console.warn("Could not dispatch rejection notification:", notifErr.message);
+    }
+
+    res.json({
+      success: true,
+      message: `${user.residentType === "TENANT" ? "Tenant" : "Homeowner"} application rejected successfully`,
+      user
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 // DELETE USER
 const deleteUser = async (req, res) => {
   try {
@@ -206,6 +331,37 @@ const deleteUser = async (req, res) => {
         success: false,
         message: "User not found"
       });
+    }
+
+    if (req.user.role === "COMMUNITY_HEAD") {
+      const userComm = (user.community || "").trim().toLowerCase();
+      const headComm = (req.user.community || "").trim().toLowerCase();
+      let authorized = Boolean(userComm && headComm && userComm === headComm);
+      if (!authorized) {
+        const Community = require("../models/Community");
+        const commRecord = await Community.findOne({ communityHead: req.user._id });
+        if (commRecord && commRecord.name.trim().toLowerCase() === userComm) {
+          authorized = true;
+        }
+      }
+      if (!authorized) {
+        return res.status(403).json({ success: false, message: "Unauthorized to delete residents outside your community." });
+      }
+    }
+
+    // Clean up House references
+    if (user.house) {
+      const house = await House.findById(user.house);
+      if (house) {
+        house.residents = house.residents.filter((r) => r.toString() !== user._id.toString());
+        if (house.owner && house.owner.toString() === user._id.toString()) {
+          house.owner = undefined;
+        }
+        if (house.residents.length === 0 && !house.owner) {
+          house.status = "VACANT";
+        }
+        await house.save();
+      }
     }
 
     await user.deleteOne();
@@ -229,5 +385,6 @@ module.exports = {
   getUserById,
   updateUser,
   deleteUser,
-  approveUser
+  approveUser,
+  rejectUser
 };
