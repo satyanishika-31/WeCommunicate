@@ -3,7 +3,6 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
   Megaphone,
-  Calendar,
   MessageSquare,
   Upload,
   Sparkles,
@@ -17,7 +16,6 @@ import { postService } from '../api/services';
 
 const types = [
   { id: 'NOTICE', label: 'Official Notice', icon: Megaphone, desc: 'Water outage, maintenance, society updates' },
-  { id: 'EVENT', label: 'Community Event', icon: Calendar, desc: 'Festivals, meetings, sports & workshops' },
   { id: 'GENERAL', label: 'Community Post', icon: MessageSquare, desc: 'Discussion, lost & found, neighbor help' },
 ];
 
@@ -187,7 +185,7 @@ const CreatePost = () => {
           </div>
 
           {/* Type Selector Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {types.map((item) => {
               const Icon = item.icon;
               const isSelected = type === item.id;

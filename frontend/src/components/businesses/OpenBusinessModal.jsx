@@ -23,8 +23,9 @@ const OpenBusinessModal = ({ isOpen, onClose, onCreated }) => {
   const [description, setDescription] = useState('');
   const [contact, setContact] = useState(user?.phone || '');
   const [timings, setTimings] = useState('09:00 AM - 08:00 PM');
+  const [priceRange, setPriceRange] = useState('');
   const [services, setServices] = useState([
-    { name: 'Custom Cake / Service', price: 500 },
+    { name: '', minPrice: '', maxPrice: '', price: '' },
   ]);
   const [images, setImages] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -37,7 +38,7 @@ const OpenBusinessModal = ({ isOpen, onClose, onCreated }) => {
   }, [isOpen, user?.phone]);
 
   const handleAddService = () => {
-    setServices([...services, { name: '', price: 0 }]);
+    setServices([...services, { name: '', minPrice: '', maxPrice: '', price: '' }]);
   };
 
   const handleRemoveService = (index) => {
@@ -47,15 +48,28 @@ const OpenBusinessModal = ({ isOpen, onClose, onCreated }) => {
   const handleServiceChange = (index, field, value) => {
     const next = [...services];
     next[index][field] = value;
+    if (field === 'minPrice') {
+      next[index].price = value;
+    }
     setServices(next);
   };
 
   const handleImageChange = (event) => {
-    const selectedImages = Array.from(event.target.files || [])
-      .filter((file) => file.type.startsWith('image/'))
-      .slice(0, 5)
-      .map((file) => ({ file, url: URL.createObjectURL(file) }));
-    setImages(selectedImages);
+    const files = Array.from(event.target.files || []).filter((file) => file.type && file.type.startsWith('image/'));
+    if (!files.length) return;
+
+    setImages((prev) => {
+      const remainingSlots = 5 - prev.length;
+      if (remainingSlots <= 0) {
+        alert('You can upload a maximum of 5 images in total.');
+        return prev;
+      }
+      const newImages = files.slice(0, remainingSlots).map((file) => ({
+        file,
+        url: URL.createObjectURL(file),
+      }));
+      return [...prev, ...newImages];
+    });
     event.target.value = '';
   };
 
@@ -72,13 +86,50 @@ const OpenBusinessModal = ({ isOpen, onClose, onCreated }) => {
 
     setLoading(true);
     setSubmitError('');
+
+    const cleanedServices = services
+      .filter((s) => s.name && s.name.trim())
+      .map((s) => {
+        const rawMin = s.minPrice !== '' && s.minPrice !== undefined ? s.minPrice : s.price;
+        const rawMax = s.maxPrice;
+
+        const numMin = rawMin !== '' && rawMin !== undefined && !isNaN(Number(rawMin)) ? Number(rawMin) : 0;
+        const numMax = rawMax !== '' && rawMax !== undefined && !isNaN(Number(rawMax)) ? Number(rawMax) : null;
+
+        const hasRange = numMax !== null && numMax > numMin;
+        const formatted = hasRange ? `₹${numMin} - ₹${numMax}` : (numMin > 0 ? `₹${numMin}` : '');
+
+        return {
+          name: s.name.trim(),
+          price: numMin,
+          minPrice: numMin,
+          maxPrice: hasRange ? numMax : numMin,
+          priceRange: formatted
+        };
+      });
+
+    // Compute overall price range if user left it blank
+    let finalPriceRange = priceRange.trim();
+    if (!finalPriceRange && cleanedServices.length > 0) {
+      const minVals = cleanedServices.map((s) => s.minPrice).filter((p) => p > 0);
+      const maxVals = cleanedServices.map((s) => s.maxPrice).filter((p) => p > 0);
+      if (minVals.length > 0) {
+        const lowest = Math.min(...minVals);
+        const highest = maxVals.length > 0 ? Math.max(...maxVals) : lowest;
+        finalPriceRange = lowest === highest ? `₹${lowest}` : `₹${lowest} - ₹${highest}`;
+      }
+    }
+
     const formData = new FormData();
-    formData.append('businessName', businessName);
+    formData.append('businessName', businessName.trim());
     formData.append('category', category);
-    formData.append('description', description);
-    formData.append('contact', contact);
-    formData.append('timings', timings);
-    formData.append('services', JSON.stringify(services.filter((service) => service.name.trim())));
+    formData.append('description', description.trim());
+    formData.append('contact', contact.trim());
+    formData.append('timings', timings.trim());
+    if (finalPriceRange) {
+      formData.append('priceRange', finalPriceRange);
+    }
+    formData.append('services', JSON.stringify(cleanedServices));
     images.forEach((image) => formData.append('images', image.file));
 
     try {
@@ -92,6 +143,8 @@ const OpenBusinessModal = ({ isOpen, onClose, onCreated }) => {
       onClose();
       setBusinessName('');
       setDescription('');
+      setPriceRange('');
+      setServices([{ name: '', minPrice: '', maxPrice: '', price: '' }]);
       images.forEach((image) => URL.revokeObjectURL(image.url));
       setImages([]);
     } catch (error) {
@@ -174,12 +227,35 @@ const OpenBusinessModal = ({ isOpen, onClose, onCreated }) => {
           </div>
         </div>
 
+        <div>
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="block text-xs font-bold text-[#542612] dark:text-[#F7F0DF] uppercase tracking-wider">
+              Overall Price Range (Optional)
+            </label>
+            <span className="text-[11px] text-[#542612]/60 dark:text-[#F7F0DF]/60">
+              Auto-calculated from items if left blank
+            </span>
+          </div>
+          <input
+            type="text"
+            value={priceRange}
+            onChange={(e) => setPriceRange(e.target.value)}
+            placeholder="e.g. ₹300 – ₹2,500 or ₹₹ Moderate"
+            className="w-full px-4 py-2.5 rounded-xl bg-[#F7F0DF] dark:bg-[#542612] text-sm text-[#542612] dark:text-white border border-[#542612]/20 dark:border-[#F7F0DF]/30 focus:outline-none focus:ring-2 focus:ring-[#542612]"
+          />
+        </div>
+
         {/* Services & Prices */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className="text-xs font-bold text-[#542612] dark:text-[#F7F0DF] uppercase tracking-wider">
-              Services & Menu Items
-            </label>
+            <div>
+              <label className="text-xs font-bold text-[#542612] dark:text-[#F7F0DF] uppercase tracking-wider block">
+                Services & Menu Items
+              </label>
+              <span className="text-[11px] text-[#542612]/70 dark:text-[#F7F0DF]/70">
+                Add fixed price (Min only) or price range (Min – Max)
+              </span>
+            </div>
             <button
               type="button"
               onClick={handleAddService}
@@ -191,30 +267,58 @@ const OpenBusinessModal = ({ isOpen, onClose, onCreated }) => {
 
           <div className="space-y-2">
             {services.map((srv, idx) => (
-              <div key={idx} className="flex items-center gap-2">
+              <div
+                key={idx}
+                className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-2 rounded-xl bg-[#F7F0DF]/40 dark:bg-[#542612]/30 border border-[#542612]/10 dark:border-[#F7F0DF]/20"
+              >
                 <input
                   type="text"
-                  placeholder="Service Name"
+                  placeholder="Service / Item Name"
                   value={srv.name}
                   onChange={(e) => handleServiceChange(idx, 'name', e.target.value)}
-                  className="flex-1 px-3 py-2 rounded-xl bg-[#F7F0DF] dark:bg-[#542612] text-xs text-[#542612] dark:text-white border border-[#542612]/20 dark:border-[#F7F0DF]/30"
+                  className="flex-1 px-3 py-2 rounded-xl bg-[#F7F0DF] dark:bg-[#542612] text-xs text-[#542612] dark:text-white border border-[#542612]/20 dark:border-[#F7F0DF]/30 focus:outline-none focus:ring-2 focus:ring-[#542612]"
                 />
-                <input
-                  type="number"
-                  placeholder="Price ₹"
-                  value={srv.price}
-                  onChange={(e) => handleServiceChange(idx, 'price', e.target.value)}
-                  className="w-24 px-3 py-2 rounded-xl bg-[#F7F0DF] dark:bg-[#542612] text-xs text-[#542612] dark:text-white border border-[#542612]/20 dark:border-[#F7F0DF]/30"
-                />
-                {services.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveService(idx)}
-                    className="p-2 text-[#542612] hover:bg-[#F7F0DF] rounded-lg"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                )}
+                <div className="flex items-center gap-1.5">
+                  <div className="relative w-28">
+                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[11px] font-bold text-[#542612]/50 dark:text-[#F7F0DF]/50">
+                      ₹
+                    </span>
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="Min / Price"
+                      value={srv.minPrice !== undefined && srv.minPrice !== null ? srv.minPrice : (srv.price ?? '')}
+                      onChange={(e) => handleServiceChange(idx, 'minPrice', e.target.value)}
+                      className="w-full pl-6 pr-2 py-2 rounded-xl bg-[#F7F0DF] dark:bg-[#542612] text-xs text-[#542612] dark:text-white border border-[#542612]/20 dark:border-[#F7F0DF]/30 focus:outline-none focus:ring-2 focus:ring-[#542612]"
+                    />
+                  </div>
+                  <span className="text-xs font-bold text-[#542612]/40 dark:text-[#F7F0DF]/40">
+                    –
+                  </span>
+                  <div className="relative w-28">
+                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[11px] font-bold text-[#542612]/50 dark:text-[#F7F0DF]/50">
+                      ₹
+                    </span>
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="Max (opt)"
+                      value={srv.maxPrice !== undefined && srv.maxPrice !== null ? srv.maxPrice : ''}
+                      onChange={(e) => handleServiceChange(idx, 'maxPrice', e.target.value)}
+                      className="w-full pl-6 pr-2 py-2 rounded-xl bg-[#F7F0DF] dark:bg-[#542612] text-xs text-[#542612] dark:text-white border border-[#542612]/20 dark:border-[#F7F0DF]/30 focus:outline-none focus:ring-2 focus:ring-[#542612]"
+                    />
+                  </div>
+                  {services.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveService(idx)}
+                      className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors"
+                      title="Remove item"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>

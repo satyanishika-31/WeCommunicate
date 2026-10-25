@@ -18,9 +18,8 @@ const createPost = async (req, res) => {
       return res.status(403).json({ success: false, message: "Only community managers can publish notices" });
     }
 
-    const image = req.file
-      ? `/uploads/${req.file.filename}`
-      : (typeof imageUrl === "string" && imageUrl.trim() ? imageUrl.trim() : null);
+    const fileUrl = req.file ? (req.file.secure_url || req.file.url || req.file.path || `/uploads/${req.file.filename}`) : null;
+    const image = fileUrl || (typeof imageUrl === "string" && imageUrl.trim() ? imageUrl.trim() : null);
 
     const post = await Post.create({
       author: req.user._id,
@@ -65,10 +64,6 @@ const createPost = async (req, res) => {
       success: false,
       message: error.message
     });
-  }
-  if (post.author.toString() !== req.user._id.toString() &&
-    !["ADMIN", "COMMUNITY_HEAD", "BLOCK_MANAGER"].includes(req.user.role)) {
-    return res.status(403).json({ success: false, message: "You are not authorized to update this post" });
   }
 };
 
@@ -195,12 +190,22 @@ const updatePost = async (req, res) => {
       });
     }
 
+    if (
+      post.author.toString() !== req.user._id.toString() &&
+      !["ADMIN", "COMMUNITY_HEAD", "BLOCK_MANAGER"].includes(req.user.role)
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "You are not authorized to update this post"
+      });
+    }
+
     post.title = req.body.title || post.title;
     post.description = req.body.description || post.description;
     post.type = req.body.type || post.type;
 
     if (req.file) {
-      post.image = `/uploads/${req.file.filename}`;
+      post.image = req.file.secure_url || req.file.url || req.file.path || `/uploads/${req.file.filename}`;
     }
 
     await post.save();
@@ -449,6 +454,7 @@ const deleteComment = async (req, res) => {
     }
     const isCommentAuthor = comment.user.toString() === req.user._id.toString();
     const isPostAuthor = post.author.toString() === req.user._id.toString();
+    const isAdmin = req.user.role === "ADMIN";
     if (!isCommentAuthor && !isPostAuthor && !isAdmin) {
       return res.status(403).json({ success: false, message: 'You are not authorized to delete this comment' });
     }

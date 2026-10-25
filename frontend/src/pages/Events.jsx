@@ -1,5 +1,5 @@
 import React, { useCallback, useState, useEffect } from 'react';
-import { Calendar, Plus } from 'lucide-react';
+import { Calendar, Plus, Upload, X, Image as ImageIcon } from 'lucide-react';
 import PageContainer from '../components/layout/PageContainer';
 import Header from '../components/layout/Header';
 import EventCard from '../components/events/EventCard';
@@ -21,9 +21,12 @@ const Events = () => {
   // Form State
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [date, setDate] = useState('2026-10-24');
+  const [date, setDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [time, setTime] = useState('06:30 PM');
   const [venue, setVenue] = useState('Central Community Clubhouse');
+  const [posterFile, setPosterFile] = useState(null);
+  const [posterPreview, setPosterPreview] = useState('');
+  const [createError, setCreateError] = useState('');
   const [creating, setCreating] = useState(false);
 
   const fetchEvents = async () => {
@@ -42,26 +45,74 @@ const Events = () => {
   }, []);
   useEventPolling(handleEventsUpdated);
 
+  useEffect(() => {
+    return () => {
+      if (posterPreview) URL.revokeObjectURL(posterPreview);
+    };
+  }, [posterPreview]);
+
+  const handlePosterChange = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type || !file.type.startsWith('image/')) {
+      alert('Please select a valid image file (JPG, PNG, or WEBP).');
+      event.target.value = '';
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Image size must be 5MB or smaller.');
+      event.target.value = '';
+      return;
+    }
+
+    if (posterPreview) URL.revokeObjectURL(posterPreview);
+    setPosterFile(file);
+    setPosterPreview(URL.createObjectURL(file));
+    event.target.value = '';
+  };
+
+  const removePoster = () => {
+    if (posterPreview) URL.revokeObjectURL(posterPreview);
+    setPosterFile(null);
+    setPosterPreview('');
+  };
+
   const handleCreateEvent = async (e) => {
     e.preventDefault();
     if (!title.trim()) return;
     setCreating(true);
-    const res = await eventService.create(
-      {
-        title,
-        description,
-        date,
-        time,
-        venue,
-        block: user?.block?._id || user?.block || undefined,
+    setCreateError('');
+
+    const formData = new FormData();
+    formData.append('title', title.trim());
+    formData.append('description', description.trim());
+    formData.append('date', date);
+    formData.append('time', time.trim());
+    formData.append('venue', venue.trim());
+    if (user?.block?._id || user?.block) {
+      formData.append('block', user?.block?._id || user?.block);
+    }
+    if (posterFile) {
+      formData.append('poster', posterFile);
+    }
+
+    try {
+      const res = await eventService.create(formData);
+      if (res.success) {
+        setCreateEventOpen(false);
+        setTitle('');
+        setDescription('');
+        removePoster();
+        fetchEvents();
+      } else {
+        setCreateError(res.message || 'Unable to publish event.');
       }
-    );
-    setCreating(false);
-    if (res.success) {
-      setCreateEventOpen(false);
-      setTitle('');
-      setDescription('');
-      fetchEvents();
+    } catch (err) {
+      setCreateError(err.response?.data?.message || err.message || 'Unable to publish event.');
+    } finally {
+      setCreating(false);
     }
   };
 
@@ -192,8 +243,65 @@ const Events = () => {
             />
           </div>
 
+          {/* Event Poster / Banner Image */}
+          <div>
+            <label className="block text-xs font-bold text-[#542612] dark:text-[#F7F0DF] uppercase tracking-wider mb-1.5">
+              Event Banner / Poster Image (Optional)
+            </label>
+
+            {posterPreview ? (
+              <div className="relative aspect-video w-full rounded-2xl overflow-hidden border-2 border-[#542612]/30 shadow-md group">
+                <img
+                  src={posterPreview}
+                  alt="Event poster preview"
+                  className="w-full h-full object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={removePoster}
+                  className="absolute top-2 right-2 p-1.5 rounded-full bg-red-600 hover:bg-red-700 text-white shadow-lg transition-transform hover:scale-110"
+                  title="Remove image"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <label className="flex flex-col items-center justify-center gap-2 p-5 rounded-2xl border-2 border-dashed border-[#542612]/30 hover:border-[#542612] bg-[#F7F0DF]/60 hover:bg-[#F7F0DF] dark:bg-[#542612]/30 cursor-pointer transition-all">
+                <div className="w-10 h-10 rounded-xl bg-[#542612]/10 text-[#542612] dark:text-[#F7F0DF] flex items-center justify-center">
+                  <Upload className="w-5 h-5" />
+                </div>
+                <div className="text-center">
+                  <span className="text-xs font-bold text-[#542612] dark:text-white block">
+                    Click to upload event poster
+                  </span>
+                  <span className="text-[11px] text-[#542612]/60 dark:text-[#F7F0DF]/60">
+                    PNG, JPG, or WEBP (Max 5MB)
+                  </span>
+                </div>
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={handlePosterChange}
+                  className="hidden"
+                />
+              </label>
+            )}
+          </div>
+
+          {createError && (
+            <p className="text-xs font-semibold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40 p-2.5 rounded-xl border border-red-200 dark:border-red-900/50">
+              {createError}
+            </p>
+          )}
+
           <div className="pt-2 flex justify-end gap-3">
-            <Button variant="secondary" onClick={() => setCreateEventOpen(false)}>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setCreateEventOpen(false);
+                removePoster();
+              }}
+            >
               Cancel
             </Button>
             <Button type="submit" loading={creating} icon={Calendar}>

@@ -41,7 +41,9 @@ const createComplaint = async (req, res) => {
       assignedHandlerName
     } = req.body;
 
-    const image = req.file ? `/uploads/${req.file.filename}` : null;
+    const image = req.file
+      ? (req.file.secure_url || req.file.url || req.file.path || `/uploads/${req.file.filename}`)
+      : null;
     const ticketId = await nextTicketId();
 
     const resolvedFlat = flatNumber || req.user.flatNumber || req.user.houseNumber || "";

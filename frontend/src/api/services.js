@@ -30,7 +30,12 @@ export const postService = {
 
 export const eventService = {
   getAll: async () => (await data(API.get('/events'))).events || [],
-  create: (eventData) => data(API.post('/events', eventData)),
+  create: (eventData) => {
+    const isFormData = eventData instanceof FormData;
+    return data(API.post('/events', eventData, isFormData ? {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    } : {}));
+  },
   toggleRSVP: (eventId) => data(API.post(`/events/${eventId}/rsvp`)),
 };
 
@@ -39,12 +44,20 @@ export const businessService = {
   create: (businessData) => data(API.post('/businesses', businessData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   })),
-  updateStatus: (businessId, status) => {
-    const endpoint = {
-      ACTIVE: 'approve',
-      PAUSED: 'pause',
-      CLOSED: 'close',
-    }[status];
+  update: (businessId, businessData) => data(API.put(`/businesses/${businessId}`, businessData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })),
+  updateStatus: (businessId, status, action) => {
+    let endpoint = action;
+    if (!endpoint) {
+      endpoint = {
+        ACTIVE: 'resume',
+        RESUME: 'resume',
+        APPROVE: 'approve',
+        PAUSED: 'pause',
+        CLOSED: 'close',
+      }[status];
+    }
     if (!endpoint) {
       return Promise.reject(new Error(`Unsupported business status: ${status}`));
     }

@@ -40,6 +40,11 @@ const businessSchema = new mongoose.Schema(
       }
     ],
 
+    priceRange: {
+      type: String,
+      trim: true
+    },
+
     services: [
       {
         name: {
@@ -49,6 +54,19 @@ const businessSchema = new mongoose.Schema(
 
         price: {
           type: Number
+        },
+
+        minPrice: {
+          type: Number
+        },
+
+        maxPrice: {
+          type: Number
+        },
+
+        priceRange: {
+          type: String,
+          trim: true
         }
       }
     ],

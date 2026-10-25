@@ -1,6 +1,10 @@
 const fs = require('fs');
-let c = fs.readFileSync('controllers/postController.js', 'utf8');
-let fn = `\n\n// DELETE COMMENT
+const path = require('path');
+
+const targetPath = path.join(__dirname, 'controllers', 'postController.js');
+let c = fs.readFileSync(targetPath, 'utf8');
+
+const fn = `\n\n// DELETE COMMENT
 const deleteComment = async (req, res) => {
   try {
     const { id, commentId } = req.params;
@@ -49,13 +53,13 @@ const deleteComment = async (req, res) => {
       message: error.message
     });
   }
-};``;
+};`;
 
 if (!c.includes('deleteComment')) {
   const exportIdx = c.lastIndexOf('module.exports');
-  c = c.slice(0, exportIdx) + fn+ '\n\n' + c.slice(exportIdx);
+  c = c.slice(0, exportIdx) + fn + '\n\n' + c.slice(exportIdx);
   c = c.replace('commentPost', 'commentPost,\n  deleteComment');
-  fs.writeFileSync('controllers/postController.js', c, 'utf8');
+  fs.writeFileSync(targetPath, c, 'utf8');
   console.log('PostController patched successfully');
 } else {
   console.log('Already patched');

@@ -1,4 +1,4 @@
-﻿const Record = require("../models/Record");
+const Record = require("../models/Record");
 
 // GET ALL RECORDS & BYLAWS
 const getRecords = async (req, res) => {
@@ -50,7 +50,9 @@ const createRecord = async (req, res) => {
       title,
       category: category || "BYLAWS",
       description,
-      documentUrl: req.file ? `/uploads/${req.file.filename}` : documentUrl,
+      documentUrl: req.file
+        ? (req.file.secure_url || req.file.url || req.file.path || `/uploads/${req.file.filename}`)
+        : documentUrl,
       referenceCode: code,
       effectiveDate: effectiveDate || new Date(),
       uploadedBy: req.user._id,

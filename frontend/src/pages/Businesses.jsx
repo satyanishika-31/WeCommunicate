@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Store, Plus, Search, Tag, Phone, Star, MessageSquare, Send, Pause, Play, Trash2 } from 'lucide-react';
+import { Store, Plus, Search, Tag, Phone, Star, MessageSquare, Send, Pause, Play, Trash2, Edit3 } from 'lucide-react';
 import PageContainer from '../components/layout/PageContainer';
 import Header from '../components/layout/Header';
 import BusinessCard from '../components/businesses/BusinessCard';
 import OpenBusinessModal from '../components/businesses/OpenBusinessModal';
+import EditBusinessModal from '../components/businesses/EditBusinessModal';
 import Modal from '../components/common/Modal';
 import Button from '../components/common/Button';
 import Avatar from '../components/common/Avatar';
@@ -34,6 +35,8 @@ const Businesses = () => {
   const [searchQuery, setSearchQuery] = useState('');
 
   const [openModal, setOpenModal] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editingBusiness, setEditingBusiness] = useState(null);
   const [viewBusiness, setViewBusiness] = useState(null);
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState('');
@@ -82,24 +85,43 @@ const Businesses = () => {
     setReviewRating(5);
   };
 
-  const canManageBusiness = (business) =>
-    business?.owner?._id === user?._id || ['ADMIN', 'BLOCK_MANAGER'].includes(user?.role);
+  const canManageBusiness = (business) => {
+    if (!business || !user) return false;
+    const ownerId = (business.owner?._id || business.owner || '').toString();
+    const userId = (user._id || user.id || '').toString();
+    const isOwner = Boolean(ownerId && userId && ownerId === userId);
+    return isOwner || ['ADMIN', 'BLOCK_MANAGER', 'COMMUNITY_HEAD'].includes(user.role);
+  };
 
-  const isBusinessOwner = (business) => business?.owner?._id === user?._id;
+  const isBusinessOwner = (business) => {
+    if (!business || !user) return false;
+    const ownerId = (business.owner?._id || business.owner || '').toString();
+    const userId = (user._id || user.id || '').toString();
+    return Boolean(ownerId && userId && ownerId === userId) || user.role === 'ADMIN';
+  };
 
   const handleBusinessStatusChange = async () => {
     if (!viewBusiness) return;
     setIsUpdatingBusiness(true);
     setBusinessActionError('');
     try {
-      const nextStatus = viewBusiness.status === 'PAUSED' ? 'ACTIVE' : 'PAUSED';
-      const result = await businessService.updateStatus(viewBusiness._id, nextStatus);
+      const isPaused = viewBusiness.status === 'PAUSED';
+      const nextStatus = isPaused ? 'ACTIVE' : 'PAUSED';
+      const action = isPaused ? 'resume' : 'pause';
+      const result = await businessService.updateStatus(viewBusiness._id, nextStatus, action);
       if (!result.success || !result.business) {
         throw new Error(result.message || 'Unable to update business status.');
       }
-      setViewBusiness(result.business);
+      const updated = {
+        ...viewBusiness,
+        ...result.business,
+        owner: (result.business.owner && typeof result.business.owner === 'object')
+          ? result.business.owner
+          : viewBusiness.owner,
+      };
+      setViewBusiness(updated);
       setBusinesses((current) =>
-        current.map((business) => business._id === result.business._id ? result.business : business)
+        current.map((b) => (b._id === updated._id ? updated : b))
       );
     } catch (error) {
       setBusinessActionError(error.response?.data?.message || error.message || 'Unable to update business status.');
@@ -108,17 +130,33 @@ const Businesses = () => {
     }
   };
 
-  const handleDeleteBusiness = async () => {
-    if (!viewBusiness || !window.confirm(`Delete "${viewBusiness.businessName}"? This cannot be undone.`)) return;
+  const handleBusinessUpdated = (updatedBusiness) => {
+    setViewBusiness((current) => (current && current._id === updatedBusiness._id ? updatedBusiness : current));
+    setEditingBusiness(updatedBusiness);
+    setBusinesses((current) =>
+      current.map((b) => (b._id === updatedBusiness._id ? updatedBusiness : b))
+    );
+  };
+
+  const handleDeleteBusiness = async (targetIdOrEvent) => {
+    const targetId = typeof targetIdOrEvent === 'string' ? targetIdOrEvent : null;
+    const bToDelete = targetId
+      ? businesses.find((b) => b._id === targetId) || viewBusiness || editingBusiness
+      : viewBusiness || editingBusiness;
+    if (!bToDelete) return;
+    if (!window.confirm(`Delete "${bToDelete.businessName}"? This cannot be undone.`)) return;
+
     setIsUpdatingBusiness(true);
     setBusinessActionError('');
     try {
-      const result = await businessService.delete(viewBusiness._id);
+      const result = await businessService.delete(bToDelete._id);
       if (!result.success) {
         throw new Error(result.message || 'Unable to delete business.');
       }
-      setBusinesses((current) => current.filter((business) => business._id !== viewBusiness._id));
-      setViewBusiness(null);
+      setBusinesses((current) => current.filter((b) => b._id !== bToDelete._id));
+      if (viewBusiness && viewBusiness._id === bToDelete._id) setViewBusiness(null);
+      if (editingBusiness && editingBusiness._id === bToDelete._id) setEditingBusiness(null);
+      setEditModalOpen(false);
     } catch (error) {
       setBusinessActionError(error.response?.data?.message || error.message || 'Unable to delete business.');
     } finally {
@@ -202,6 +240,10 @@ const Businesses = () => {
               key={b._id}
               business={b}
               onClick={(bItem) => setViewBusiness(bItem)}
+              onEdit={(bItem) => {
+                setEditingBusiness(bItem);
+                setEditModalOpen(true);
+              }}
             />
           ))}
         </div>
@@ -247,6 +289,7 @@ const Businesses = () => {
                   </h4>
                   <span className="text-xs text-[#542612]/70">
                     {viewBusiness.owner?.house || 'Block B'} • {viewBusiness.timings || '09 AM - 08 PM'}
+                    {viewBusiness.priceRange && ` • ${viewBusiness.priceRange}`}
                   </span>
                 </div>
               </div>
@@ -271,19 +314,27 @@ const Businesses = () => {
                   Available Services & Pricing
                 </h5>
                 <div className="space-y-2">
-                  {viewBusiness.services.map((s, i) => (
-                    <div
-                      key={i}
-                      className="flex items-center justify-between p-3 rounded-xl bg-[#F5EFE1] dark:bg-[#542612] border border-[#542612]/15 dark:border-[#F7F0DF]/30/60 text-xs font-semibold"
-                    >
-                      <span className="text-[#542612] dark:text-[#F7F0DF]">
-                        {s.name}
-                      </span>
-                      <span className="text-[#542612] dark:text-[#F7F0DF] font-extrabold">
-                        {s.price ? `₹${s.price}` : 'Quote on request'}
-                      </span>
-                    </div>
-                  ))}
+                  {viewBusiness.services.map((s, i) => {
+                    const priceText = s.priceRange
+                      ? s.priceRange
+                      : s.minPrice && s.maxPrice && s.maxPrice > s.minPrice
+                      ? `₹${s.minPrice} - ₹${s.maxPrice}`
+                      : (s.price || s.minPrice ? `₹${s.price || s.minPrice}` : 'Quote on request');
+
+                    return (
+                      <div
+                        key={i}
+                        className="flex items-center justify-between p-3 rounded-xl bg-[#F5EFE1] dark:bg-[#542612] border border-[#542612]/15 dark:border-[#F7F0DF]/30/60 text-xs font-semibold"
+                      >
+                        <span className="text-[#542612] dark:text-[#F7F0DF]">
+                          {s.name}
+                        </span>
+                        <span className="text-[#542612] dark:text-[#F7F0DF] font-extrabold">
+                          {priceText}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -385,12 +436,23 @@ const Businesses = () => {
                 {businessActionError && (
                   <p className="text-xs font-semibold text-red-700">{businessActionError}</p>
                 )}
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingBusiness(viewBusiness);
+                      setEditModalOpen(true);
+                    }}
+                    className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#542612] px-4 py-2.5 text-xs font-extrabold text-white transition-all hover:bg-[#3D1A0C] shadow-sm"
+                  >
+                    <Edit3 className="h-4 w-4" />
+                    Edit Business & Prices
+                  </button>
                   <button
                     type="button"
                     onClick={handleBusinessStatusChange}
                     disabled={isUpdatingBusiness}
-                    className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-[#542612]/20 bg-[#F7F0DF] px-4 py-3 text-xs font-extrabold text-[#542612] transition-colors hover:bg-[#EDE2CB] disabled:cursor-not-allowed disabled:opacity-60"
+                    className="flex items-center justify-center gap-2 rounded-xl border border-[#542612]/20 bg-[#F7F0DF] px-4 py-2.5 text-xs font-extrabold text-[#542612] transition-colors hover:bg-[#EDE2CB] disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {viewBusiness.status === 'PAUSED' ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
                     {viewBusiness.status === 'PAUSED' ? 'Resume Business' : 'Pause Business'}
@@ -400,7 +462,7 @@ const Businesses = () => {
                       type="button"
                       onClick={handleDeleteBusiness}
                       disabled={isUpdatingBusiness}
-                      className="flex items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs font-extrabold text-red-700 transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                      className="flex items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-xs font-extrabold text-red-700 transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       <Trash2 className="h-4 w-4" />
                       Delete
@@ -411,6 +473,20 @@ const Businesses = () => {
             )}
             </div>
         </Modal>
+      )}
+
+      {/* Edit Business Form */}
+      {(editingBusiness || viewBusiness) && (
+        <EditBusinessModal
+          isOpen={editModalOpen}
+          onClose={() => {
+            setEditModalOpen(false);
+            setEditingBusiness(null);
+          }}
+          business={editingBusiness || viewBusiness}
+          onUpdated={handleBusinessUpdated}
+          onDelete={handleDeleteBusiness}
+        />
       )}
 
       {/* Open Business Form */}

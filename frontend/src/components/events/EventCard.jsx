@@ -4,6 +4,7 @@ import { Calendar, Clock, MapPin, Users, CheckCircle2 } from 'lucide-react';
 import Button from '../common/Button';
 import { eventService } from '../../api/services';
 import { useAuth } from '../../context/AuthContext';
+import { getMediaUrl } from '../../utils/media';
 
 const EventCard = ({ event, onRSVPToggle }) => {
   const { user } = useAuth();
@@ -50,7 +51,7 @@ const EventCard = ({ event, onRSVPToggle }) => {
         {/* Event Poster Header */}
         <div className="relative h-48 sm:h-52 overflow-hidden bg-[#F7F0DF] dark:bg-[#542612]">
           <img
-            src={event.poster || 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&q=80&w=1000'}
+            src={(event.poster || event.image) ? getMediaUrl(event.poster || event.image) : 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&q=80&w=1000'}
             alt={event.title}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           />

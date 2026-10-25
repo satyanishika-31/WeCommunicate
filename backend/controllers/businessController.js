@@ -1,11 +1,19 @@
 const Business = require("../models/Business");
 
-const canManageBusiness = (business, user) =>
-  business.owner.toString() === user._id.toString() ||
-  ["ADMIN", "COMMUNITY_HEAD", "BLOCK_MANAGER"].includes(user.role);
+const getOwnerId = (business) => (business?.owner?._id || business?.owner || '').toString();
 
-const isBusinessOwner = (business, user) =>
-  business.owner.toString() === user._id.toString();
+const canManageBusiness = (business, user) => {
+  const ownerId = getOwnerId(business);
+  const userId = (user?._id || user?.id || '').toString();
+  return (ownerId && userId && ownerId === userId) ||
+    ["ADMIN", "COMMUNITY_HEAD", "BLOCK_MANAGER"].includes(user?.role);
+};
+
+const isBusinessOwner = (business, user) => {
+  const ownerId = getOwnerId(business);
+  const userId = (user?._id || user?.id || '').toString();
+  return Boolean(ownerId && userId && ownerId === userId) || user?.role === 'ADMIN';
+};
 
 
 // CREATE BUSINESS
@@ -17,7 +25,8 @@ const createBusiness = async (req, res) => {
       description,
       services,
       contact,
-      timings
+      timings,
+      priceRange
     } = req.body;
 
     let parsedServices = services;
@@ -26,7 +35,7 @@ const createBusiness = async (req, res) => {
     }
 
     const images = req.files
-      ? req.files.map(file => `/uploads/${file.filename}`)
+      ? req.files.map(file => file.secure_url || file.url || file.path || `/uploads/${file.filename}`)
       : [];
 
     const business = await Business.create({
@@ -37,6 +46,7 @@ const createBusiness = async (req, res) => {
       services: parsedServices,
       contact,
       timings,
+      priceRange: priceRange || undefined,
       images
     });
 
@@ -122,7 +132,7 @@ const updateBusiness = async (req, res) => {
     }
 
     const updateData = {};
-    ["businessName", "category", "description", "services", "contact", "timings"].forEach((field) => {
+    ["businessName", "category", "description", "services", "contact", "timings", "priceRange"].forEach((field) => {
       if (req.body[field] !== undefined) updateData[field] = req.body[field];
     });
     if (typeof updateData.services === "string") {
@@ -130,11 +140,30 @@ const updateBusiness = async (req, res) => {
     }
     Object.assign(business, updateData);
 
-    if (req.files) {
-      business.images = req.files.map(file => `/uploads/${file.filename}`);
+    let existingImages = [];
+    if (req.body.existingImages !== undefined) {
+      try {
+        existingImages = typeof req.body.existingImages === "string"
+          ? JSON.parse(req.body.existingImages)
+          : req.body.existingImages;
+      } catch {
+        existingImages = Array.isArray(req.body.existingImages) ? req.body.existingImages : [req.body.existingImages];
+      }
+    } else {
+      existingImages = business.images || [];
+    }
+
+    const newUploadedImages = req.files && req.files.length > 0
+      ? req.files.map(file => file.secure_url || file.url || file.path || `/uploads/${file.filename}`)
+      : [];
+
+    if (req.body.existingImages !== undefined || newUploadedImages.length > 0) {
+      business.images = [...existingImages, ...newUploadedImages].slice(0, 5);
     }
 
     await business.save();
+    await business.populate("owner", "name profileImage block phone");
+    await business.populate("approvedBy", "name");
 
     res.status(200).json({
       success: true,
@@ -161,7 +190,7 @@ const approveBusiness = async (req, res) => {
         approvedBy: req.user._id
       },
       { new: true }
-    );
+    ).populate("owner", "name profileImage block phone").populate("approvedBy", "name");
 
     if (!business) {
       return res.status(404).json({
@@ -200,7 +229,7 @@ const pauseBusiness = async (req, res) => {
       req.params.id,
       { status: "PAUSED" },
       { new: true }
-    );
+    ).populate("owner", "name profileImage block phone").populate("approvedBy", "name");
 
     res.status(200).json({
       success: true,
@@ -232,7 +261,7 @@ const resumeBusiness = async (req, res) => {
       req.params.id,
       { status: "ACTIVE" },
       { new: true }
-    );
+    ).populate("owner", "name profileImage block phone").populate("approvedBy", "name");
 
     res.status(200).json({
       success: true,

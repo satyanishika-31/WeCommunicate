@@ -34,7 +34,7 @@ router.post(
   "/",
   protect,
   authorize("ADMIN", "COMMUNITY_HEAD", "BLOCK_MANAGER"),
-  upload.single("poster"),
+  upload.fields([{ name: "poster", maxCount: 1 }, { name: "image", maxCount: 1 }]),
   createEvent
 );
 
@@ -43,7 +43,7 @@ router.put(
   "/:id",
   protect,
   authorize("ADMIN", "COMMUNITY_HEAD", "BLOCK_MANAGER"),
-  upload.single("poster"),
+  upload.fields([{ name: "poster", maxCount: 1 }, { name: "image", maxCount: 1 }]),
   updateEvent
 );
 

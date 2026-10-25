@@ -3,6 +3,12 @@ const User = require("../models/User");
 const createNotifications = require("../utils/createNotification");
 
 
+const getFileUrl = (req) => {
+  const file = req.file || (req.files?.poster?.[0]) || (req.files?.image?.[0]);
+  if (!file) return null;
+  return file.secure_url || file.url || file.path || (file.filename ? `/uploads/${file.filename}` : null);
+};
+
 // CREATE EVENT
 const createEvent = async (req, res) => {
   try {
@@ -15,7 +21,7 @@ const createEvent = async (req, res) => {
       block
     } = req.body;
 
-    const poster = req.file ? `/uploads/${req.file.filename}` : null;
+    const poster = getFileUrl(req) || req.body.poster || req.body.image || null;
 
     const event = await Event.create({
       createdBy: req.user._id,
@@ -134,7 +140,14 @@ const updateEvent = async (req, res) => {
     ["title", "description", "date", "time", "venue", "block"].forEach((field) => {
       if (req.body[field] !== undefined) event[field] = req.body[field];
     });
-    if (req.file) event.poster = `/uploads/${req.file.filename}`;
+    const uploadedPoster = getFileUrl(req);
+    if (uploadedPoster) {
+      event.poster = uploadedPoster;
+    } else if (req.body.poster !== undefined) {
+      event.poster = req.body.poster;
+    } else if (req.body.image !== undefined) {
+      event.poster = req.body.image;
+    }
     await event.save();
 
     res.status(200).json({
