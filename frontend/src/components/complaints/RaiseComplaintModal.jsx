@@ -31,16 +31,17 @@ const RaiseComplaintModal = ({ isOpen, onClose, onCreated }) => {
   const [description, setDescription] = useState('');
   const [intakeRoute, setIntakeRoute] = useState('RESIDENT_APP');
   const [flatNumber, setFlatNumber] = useState(user?.flatNumber || user?.houseNumber || user?.house?.houseNumber || '');
+  const [error, setError] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!title.trim() || !description.trim()) return;
 
+    setError('');
     setLoading(true);
     try {
       const res = await complaintService.create(
-        { title, category, description, intakeRoute, flatNumber },
-        user
+        { title, category, description, intakeRoute, flatNumber }
       );
 
       if (res.success && res.complaint) {
@@ -48,7 +49,15 @@ const RaiseComplaintModal = ({ isOpen, onClose, onCreated }) => {
         onClose();
         setTitle('');
         setDescription('');
+      } else {
+        setError(res.message || 'Unable to submit the complaint.');
       }
+    } catch (requestError) {
+      setError(
+        requestError.code === 'ECONNABORTED'
+          ? 'The server took too long to respond. Please check that the backend is running.'
+          : requestError.response?.data?.message || requestError.message || 'Unable to submit the complaint.'
+      );
     } finally {
       setLoading(false);
     }
@@ -57,6 +66,12 @@ const RaiseComplaintModal = ({ isOpen, onClose, onCreated }) => {
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Register Maintenance Ticket">
       <form onSubmit={handleSubmit} className="space-y-4 font-sans text-xs">
+        {error && (
+          <div className="rounded-xl border border-red-300 bg-red-50 px-3 py-2 text-xs text-red-700">
+            {error}
+          </div>
+        )}
+
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="block text-xs font-bold text-[#542612] dark:text-[#F7F0DF] uppercase tracking-wider mb-1.5">

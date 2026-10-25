@@ -14,6 +14,7 @@ const Complaints = () => {
   const { user } = useAuth();
   const [complaints, setComplaints] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [filterTab, setFilterTab] = useState('ALL'); // ALL | MY | PENDING | IN_PROGRESS | RESOLVED
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -22,9 +23,19 @@ const Complaints = () => {
 
   const fetchComplaints = async () => {
     setLoading(true);
-    const data = await complaintService.getAll();
-    setComplaints(data || []);
-    setLoading(false);
+    setError('');
+    try {
+      const data = await complaintService.getAll();
+      setComplaints(data || []);
+    } catch (requestError) {
+      setError(
+        requestError.code === 'ECONNABORTED'
+          ? 'The server took too long to respond. Please check that the backend is running.'
+          : requestError.response?.data?.message || requestError.message || 'Unable to load complaints.'
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -46,6 +57,12 @@ const Complaints = () => {
   return (
     <PageContainer>
       <Header onSearch={(q) => setSearchQuery(q)} />
+
+      {error && (
+        <div className="mb-6 rounded-2xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
 
       {/* Header section */}
       <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">

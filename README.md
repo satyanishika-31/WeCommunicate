@@ -12,7 +12,10 @@ We Communicate is a React 19/Vite frontend with a Node/Express/MongoDB backend.
    `npm run build:frontend` (or the frontend dev script in `frontend/package.json`).
 
 The backend needs its own host in deployment. The Vercel configuration covers only
-the frontend; configure `VITE_API_URL` to the deployed backend API.
+the frontend; configure the Vercel project environment variable `VITE_API_URL` to
+the deployed backend API, including the `/api` suffix (for example,
+`https://your-backend-host.example/api`). Do not leave it unset in production,
+because the frontend fallback points to localhost.
 
 Uploaded files are stored on local disk in `backend/uploads`. Local disk is not
 durable on most hosted platforms, so use persistent storage before deploying
