@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import {
   Megaphone,
   Calendar,
-  Store,
   MessageSquare,
   Upload,
   Sparkles,
@@ -19,9 +18,45 @@ import { postService } from '../api/services';
 const types = [
   { id: 'NOTICE', label: 'Official Notice', icon: Megaphone, desc: 'Water outage, maintenance, society updates' },
   { id: 'EVENT', label: 'Community Event', icon: Calendar, desc: 'Festivals, meetings, sports & workshops' },
-  { id: 'BUSINESS', label: 'Resident Business', icon: Store, desc: 'Home baked goodies, tuition, services' },
   { id: 'GENERAL', label: 'Community Post', icon: MessageSquare, desc: 'Discussion, lost & found, neighbor help' },
 ];
+
+const compressImageFile = (file) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target.result;
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+        const maxDimension = 1280;
+
+        if (width > maxDimension || height > maxDimension) {
+          if (width > height) {
+            height = Math.round((height * maxDimension) / width);
+            width = maxDimension;
+          } else {
+            width = Math.round((width * maxDimension) / height);
+            height = maxDimension;
+          }
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+        resolve(dataUrl);
+      };
+      img.onerror = (err) => reject(err);
+    };
+    reader.onerror = (err) => reject(err);
+  });
+};
 
 const CreatePost = () => {
   const navigate = useNavigate();
@@ -83,31 +118,37 @@ const CreatePost = () => {
     setLoading(true);
     setSubmitError('');
     try {
+      let finalImage = imageUrl?.trim() || '';
+
       if (imageFile) {
-        const postData = new FormData();
-        postData.append('type', type);
-        postData.append('title', title);
-        postData.append('description', description);
-        postData.append('isUrgent', type === 'NOTICE' ? String(isUrgent) : 'false');
-        postData.append('image', imageFile);
-        const res = await postService.create(postData);
-        if (res.success) {
-          navigate('/home');
-        } else {
-          setSubmitError(res.message || 'Failed to publish post.');
+        try {
+          finalImage = await compressImageFile(imageFile);
+        } catch {
+          // If canvas fails, fallback to FormData multipart
+          const postData = new FormData();
+          postData.append('type', type);
+          postData.append('title', title.trim());
+          postData.append('description', description.trim());
+          postData.append('isUrgent', type === 'NOTICE' ? String(isUrgent) : 'false');
+          postData.append('image', imageFile);
+          const res = await postService.create(postData);
+          if (res.success) {
+            navigate('/home');
+          } else {
+            setSubmitError(res.message || 'Failed to publish post.');
+          }
+          return;
         }
-        return;
       }
 
       const postData = {
         type,
-        title,
-        description,
+        title: title.trim(),
+        description: description.trim(),
         isUrgent: type === 'NOTICE' ? isUrgent : false,
-        ...(typeof imageUrl === 'string' && imageUrl.trim()
-          ? { image: imageUrl.trim() }
-          : {}),
+        ...(finalImage ? { image: finalImage } : {}),
       };
+
       const res = await postService.create(postData);
       if (res.success) {
         navigate('/home');
@@ -146,7 +187,7 @@ const CreatePost = () => {
           </div>
 
           {/* Type Selector Grid */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {types.map((item) => {
               const Icon = item.icon;
               const isSelected = type === item.id;
